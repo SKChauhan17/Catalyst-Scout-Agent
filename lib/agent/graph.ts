@@ -1,4 +1,4 @@
-import { StateGraph, END } from '@langchain/langgraph';
+import { StateGraph, START, END } from '@langchain/langgraph';
 import { AgentStateAnnotation, type AgentState } from './state';
 import { parseJDNode } from './nodes/parseJD';
 import { retrieveMatchNode } from './nodes/retrieveMatch';
@@ -8,15 +8,15 @@ import { rankCandidatesNode } from './nodes/rankCandidates';
 // ============================================================
 // Node name constants — avoids magic strings throughout
 // ============================================================
-const PARSE_JD = 'parseJD';
-const RETRIEVE_MATCH = 'retrieveMatch';
-const SIMULATE_CHAT = 'simulateChat';
-const RANK_CANDIDATES = 'rankCandidates';
+const PARSE_JD = 'parseJD' as const;
+const RETRIEVE_MATCH = 'retrieveMatch' as const;
+const SIMULATE_CHAT = 'simulateChat' as const;
+const RANK_CANDIDATES = 'rankCandidates' as const;
 
 // ============================================================
-// Conditional edge: loop or terminate
+// Conditional edge: loop back or terminate
 // ============================================================
-function shouldContinueLoop(state: AgentState): 'simulateChat' | typeof END {
+function shouldContinueLoop(state: AgentState): typeof SIMULATE_CHAT | typeof END {
   if (state.currentCandidateIndex < state.retrievedCandidates.length) {
     return SIMULATE_CHAT;
   }
@@ -27,27 +27,23 @@ function shouldContinueLoop(state: AgentState): 'simulateChat' | typeof END {
 // Graph compilation
 // ============================================================
 function buildCatalystScoutGraph() {
-  const graph = new StateGraph(AgentStateAnnotation);
-
-  // Register all nodes
-  graph.addNode(PARSE_JD, parseJDNode);
-  graph.addNode(RETRIEVE_MATCH, retrieveMatchNode);
-  graph.addNode(SIMULATE_CHAT, simulateChatNode);
-  graph.addNode(RANK_CANDIDATES, rankCandidatesNode);
-
-  // Linear entry path
-  graph.setEntryPoint(PARSE_JD);
-  graph.addEdge(PARSE_JD, RETRIEVE_MATCH);
-  graph.addEdge(RETRIEVE_MATCH, SIMULATE_CHAT);
-
-  // Simulation → Ranking is always sequential
-  graph.addEdge(SIMULATE_CHAT, RANK_CANDIDATES);
-
-  // Conditional loop: after ranking, check if more candidates remain
-  graph.addConditionalEdges(RANK_CANDIDATES, shouldContinueLoop, {
-    [SIMULATE_CHAT]: SIMULATE_CHAT,
-    [END]: END,
-  });
+  const graph = new StateGraph(AgentStateAnnotation)
+    // Register all nodes
+    .addNode(PARSE_JD, parseJDNode)
+    .addNode(RETRIEVE_MATCH, retrieveMatchNode)
+    .addNode(SIMULATE_CHAT, simulateChatNode)
+    .addNode(RANK_CANDIDATES, rankCandidatesNode)
+    // Entry: START → parseJD (replaces deprecated setEntryPoint)
+    .addEdge(START, PARSE_JD)
+    // Linear pipeline
+    .addEdge(PARSE_JD, RETRIEVE_MATCH)
+    .addEdge(RETRIEVE_MATCH, SIMULATE_CHAT)
+    .addEdge(SIMULATE_CHAT, RANK_CANDIDATES)
+    // Conditional loop: after ranking, evaluate whether more candidates remain
+    .addConditionalEdges(RANK_CANDIDATES, shouldContinueLoop, {
+      [SIMULATE_CHAT]: SIMULATE_CHAT,
+      [END]: END,
+    });
 
   return graph.compile();
 }

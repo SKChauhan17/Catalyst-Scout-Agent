@@ -37,8 +37,10 @@ export async function retrieveMatchNode(state: AgentState): Promise<Partial<Agen
   ].join('. ');
 
   // Generate 384-dimensional vector locally via Supabase/gte-small
-  const extractor = await getEmbeddingPipeline();
-  const output = await extractor(queryText, { pooling: 'mean', normalize: true });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const extractor = await getEmbeddingPipeline() as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const output: any = await extractor(queryText, { pooling: 'mean', normalize: true });
   const queryEmbedding = Array.from(output.data) as number[];
 
   // Invoke the match_candidates RPC (hybrid cosine similarity + threshold)
