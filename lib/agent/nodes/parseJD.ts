@@ -1,9 +1,8 @@
-import OpenAI from 'openai';
+import Groq from 'groq-sdk';
 import type { AgentState, ParsedJD } from '../state';
 
-const sambanova = new OpenAI({
-  baseURL: 'https://api.sambanova.ai/v1',
-  apiKey: process.env.SAMBANOVA_API_KEY,
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 const SYSTEM_PROMPT = `You are an expert technical recruiter assistant. Your job is to parse a raw job description and extract a strict JSON object.
@@ -27,7 +26,7 @@ Rules:
 - "role_summary": A single concise sentence describing the role.`;
 
 export async function parseJDNode(state: AgentState): Promise<Partial<AgentState>> {
-  console.log('[Node: parseJD] Parsing raw job description via SambaNova...');
+  console.log('[Node: parseJD] Parsing raw job description via Groq...');
 
   if (!state.rawJD || state.rawJD.trim() === '') {
     throw new Error('[parseJD] rawJD is empty. Cannot parse.');
@@ -39,8 +38,8 @@ export async function parseJDNode(state: AgentState): Promise<Partial<AgentState
   // Retry loop with exponential backoff (max 3 attempts)
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const completion = await sambanova.chat.completions.create({
-        model: 'Meta-Llama-3.3-70B-Instruct',
+      const completion = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: `Parse this job description:\n\n${state.rawJD}` },
