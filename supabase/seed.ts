@@ -7,20 +7,23 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // ONLY use Service Role in backend scripts
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Initialize OpenRouter
+// Initialize SambaNova Cloud (via OpenAI SDK)
 const openai = new OpenAI({
-  baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: 'https://api.sambanova.ai/v1',
+  apiKey: process.env.SAMBANOVA_API_KEY,
 });
 
 const CANDIDATE_COUNT = 100;
 const BATCH_SIZE = 5;
 const MAX_RETRIES = 3;
 
-async function generateBatchWithRetry(prompt: string, retries = 0): Promise<any[]> {
+async function generateBatchWithRetry(
+  prompt: string, 
+  retries = 0
+): Promise<any[]> {
   try {
     const completion = await openai.chat.completions.create({
-      model: 'google/gemma-4-31b-it:free',
+      model: 'Meta-Llama-3.3-70B-Instruct',
       messages: [
         {
           role: 'system',
@@ -36,13 +39,14 @@ async function generateBatchWithRetry(prompt: string, retries = 0): Promise<any[
     const rawJson = completion.choices[0].message.content || '[]';
     const cleanJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(cleanJson);
-  } catch (error) {
+  } catch (error: any) {
     if (retries < MAX_RETRIES) {
       const waitTime = Math.pow(2, retries) * 1000;
-      console.warn(`OpenRouter API failed. Retrying in ${waitTime}ms... (Attempt ${retries + 1}/${MAX_RETRIES})`);
+      console.warn(`SambaNova API error. Retrying in ${waitTime}ms... (Attempt ${retries + 1}/${MAX_RETRIES})`);
       await new Promise(res => setTimeout(res, waitTime));
       return generateBatchWithRetry(prompt, retries + 1);
     }
+    
     throw new Error(`Failed to generate batch after ${MAX_RETRIES} retries: ${error}`);
   }
 }
@@ -84,6 +88,11 @@ async function generateCandidates() {
   }
 
   console.log(`Bulk inserting ${candidatesToInsert.length} candidates into Supabase...`);
+  if (candidatesToInsert.length === 0) {
+    console.warn('No candidates generated. Exiting.');
+    return;
+  }
+  
   const { error } = await supabase.from('candidates').insert(candidatesToInsert);
   
   if (error) {
