@@ -26,25 +26,35 @@ async function generateCandidates() {
   for (let i = 0; i < CANDIDATE_COUNT; i += BATCH_SIZE) {
     try {
       console.log(`Generating batch ${i / BATCH_SIZE + 1}...`);
-      const completion = await openai.chat.completions.create({
-        model: 'google/gemma-2-9b-it:free',
-        messages: [
-          {
-            role: 'system',
-            content: `You are an IT recruitment data generator. Output ONLY a valid JSON array containing exactly ${BATCH_SIZE} objects. No markdown framing or explanations.`,
-          },
-          {
-            role: 'user',
-            content: `Generate ${BATCH_SIZE} software engineering candidate JSON objects. Keys required for each object:
-            "name" (string), "skills" (array of strings), "location" (string), "salary_expectation" (string), "system_prompt_persona" (a detailed paragraph describing their technical background, personality quirks, and communication style for an AI chat simulation).`,
-          },
-        ],
-      });
-
-      const rawJson = completion.choices[0].message.content || '[]';
-      // Clean potential markdown blocks just in case
-      const cleanJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
-      const generatedCandidates = JSON.parse(cleanJson);
+      let generatedCandidates;
+      try {
+        const completion = await openai.chat.completions.create({
+          model: 'meta-llama/llama-3-8b-instruct:free',
+          messages: [
+            {
+              role: 'system',
+              content: `You are an IT recruitment data generator. Output ONLY a valid JSON array containing exactly ${BATCH_SIZE} objects. No markdown framing or explanations.`,
+            },
+            {
+              role: 'user',
+              content: `Generate ${BATCH_SIZE} software engineering candidate JSON objects. Keys required for each object:
+              "name" (string), "skills" (array of strings), "location" (string), "salary_expectation" (string), "system_prompt_persona" (a detailed paragraph describing their technical background, personality quirks, and communication style for an AI chat simulation).`,
+            },
+          ],
+        });
+        const rawJson = completion.choices[0].message.content || '[]';
+        const cleanJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
+        generatedCandidates = JSON.parse(cleanJson);
+      } catch (apiError) {
+        console.warn('OpenRouter API failed, using fallback generator...');
+        generatedCandidates = Array.from({ length: BATCH_SIZE }).map((_, idx) => ({
+          name: `Mock Candidate ${i + idx + 1}`,
+          skills: ['React', 'TypeScript', 'Node.js', 'PostgreSQL'],
+          location: 'Remote',
+          salary_expectation: '$120k - $150k',
+          system_prompt_persona: 'A pragmatic senior engineer who values clean code and strong typing.'
+        }));
+      }
 
       for (const candidate of generatedCandidates) {
         // Embed the candidate's skills + persona
