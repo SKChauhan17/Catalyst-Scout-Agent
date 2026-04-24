@@ -26,7 +26,7 @@
   - [x] Create Node.js script to generate 100 mock candidate profiles.
   - [x] Integrate OpenRouter free tier (e.g., Llama 3 70B) to generate realistic `system_prompt_persona` for each candidate.
   - [x] Integrate Transformers.js (or OpenRouter embedding model) to generate 384-dimensional vectors for each candidate.
-  - [ ] Execute seed script and verify 100 records in Supabase.
+  - [x] Execute seed script and verify 100 records in Supabase.
 - [x] **Phase 1 Git Checkpoint**
   - [x] Ensure all code is micro-committed with conventional commits (e.g., `feat: database schema and rls`).
   - [x] Push to origin, open PR, instruct user to merge to `main`.

@@ -15,46 +15,53 @@ const openai = new OpenAI({
 
 const CANDIDATE_COUNT = 100;
 const BATCH_SIZE = 5;
+const MAX_RETRIES = 3;
+
+async function generateBatchWithRetry(prompt: string, retries = 0): Promise<any[]> {
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'google/gemma-4-31b-it:free',
+      messages: [
+        {
+          role: 'system',
+          content: `You are an IT recruitment data generator. Output ONLY a valid JSON array containing exactly ${BATCH_SIZE} objects. No markdown framing or explanations.`,
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    });
+
+    const rawJson = completion.choices[0].message.content || '[]';
+    const cleanJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanJson);
+  } catch (error) {
+    if (retries < MAX_RETRIES) {
+      const waitTime = Math.pow(2, retries) * 1000;
+      console.warn(`OpenRouter API failed. Retrying in ${waitTime}ms... (Attempt ${retries + 1}/${MAX_RETRIES})`);
+      await new Promise(res => setTimeout(res, waitTime));
+      return generateBatchWithRetry(prompt, retries + 1);
+    }
+    throw new Error(`Failed to generate batch after ${MAX_RETRIES} retries: ${error}`);
+  }
+}
 
 async function generateCandidates() {
-  console.log('Loading local embedding model (Xenova/gte-small)...');
-  const extractor = await pipeline('feature-extraction', 'Xenova/gte-small');
+  console.log('Loading local embedding model (Supabase/gte-small)...');
+  const extractor = await pipeline('feature-extraction', 'Supabase/gte-small');
 
   const candidatesToInsert = [];
   console.log(`Generating ${CANDIDATE_COUNT} mock candidates...`);
 
   for (let i = 0; i < CANDIDATE_COUNT; i += BATCH_SIZE) {
+    console.log(`Generating batch ${i / BATCH_SIZE + 1} of ${CANDIDATE_COUNT / BATCH_SIZE}...`);
+    
+    const prompt = `Generate ${BATCH_SIZE} software engineering candidate JSON objects. Keys required for each object:
+    "name" (string), "skills" (array of strings), "location" (string), "salary_expectation" (string), "system_prompt_persona" (a detailed paragraph describing their technical background, personality quirks, and communication style for an AI chat simulation).`;
+
     try {
-      console.log(`Generating batch ${i / BATCH_SIZE + 1}...`);
-      let generatedCandidates;
-      try {
-        const completion = await openai.chat.completions.create({
-          model: 'meta-llama/llama-3-8b-instruct:free',
-          messages: [
-            {
-              role: 'system',
-              content: `You are an IT recruitment data generator. Output ONLY a valid JSON array containing exactly ${BATCH_SIZE} objects. No markdown framing or explanations.`,
-            },
-            {
-              role: 'user',
-              content: `Generate ${BATCH_SIZE} software engineering candidate JSON objects. Keys required for each object:
-              "name" (string), "skills" (array of strings), "location" (string), "salary_expectation" (string), "system_prompt_persona" (a detailed paragraph describing their technical background, personality quirks, and communication style for an AI chat simulation).`,
-            },
-          ],
-        });
-        const rawJson = completion.choices[0].message.content || '[]';
-        const cleanJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
-        generatedCandidates = JSON.parse(cleanJson);
-      } catch (apiError) {
-        console.warn('OpenRouter API failed, using fallback generator...');
-        generatedCandidates = Array.from({ length: BATCH_SIZE }).map((_, idx) => ({
-          name: `Mock Candidate ${i + idx + 1}`,
-          skills: ['React', 'TypeScript', 'Node.js', 'PostgreSQL'],
-          location: 'Remote',
-          salary_expectation: '$120k - $150k',
-          system_prompt_persona: 'A pragmatic senior engineer who values clean code and strong typing.'
-        }));
-      }
+      const generatedCandidates = await generateBatchWithRetry(prompt);
 
       for (const candidate of generatedCandidates) {
         // Embed the candidate's skills + persona
@@ -72,7 +79,7 @@ async function generateCandidates() {
         });
       }
     } catch (e) {
-      console.error('Failed to generate/parse batch, continuing...', e);
+      console.error('Critical failure on batch, skipping...', e);
     }
   }
 
