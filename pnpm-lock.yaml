@@ -6,6 +6,9 @@ settings:
 
 overrides:
   sharp: ^0.34.5
+  protobufjs: ^7.5.5
+  uuid: ^14.0.0
+  postcss: ^8.5.10
 
 importers:
 
@@ -680,9 +683,6 @@ packages:
 
   '@types/json5@0.0.29':
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
-
-  '@types/long@4.0.2':
-    resolution: {integrity: sha512-MqTGEo5bj5t157U6fA/BiDynNkn0YknVdh48CMPkTSpFTVmvao5UQmm7uEF6xBEo7qIMAlY/JSleYaE6VOdpaA==}
 
   '@types/node@20.19.39':
     resolution: {integrity: sha512-orrrD74MBUyK8jOAD/r0+lfa1I2MO6I+vAkmAWzMYbCcgrN4lCrmK52gRFQq/JRxfYPfonkr4b0jcY7Olqdqbw==}
@@ -1730,6 +1730,9 @@ packages:
   long@4.0.0:
     resolution: {integrity: sha512-XsP+KhQif4bjX1kbuSiySJFNAehNxgLb6hPRGJ9QsUr8ajHkuXGdrHmFUTUUXhDwVX2R5bY4JNZEwbUiMhV+MA==}
 
+  long@5.3.2:
+    resolution: {integrity: sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA==}
+
   loose-envify@1.4.0:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
     hasBin: true
@@ -1958,10 +1961,6 @@ packages:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
     engines: {node: '>= 0.4'}
 
-  postcss@8.4.31:
-    resolution: {integrity: sha512-PS08Iboia9mts/2ygV3eLpY5ghnUcfLV/EXTOW1E2qYxJKGGBUtNjN76FYHnMs36RmARn41bC0AZmn+rR0OVpQ==}
-    engines: {node: ^10 || ^12 || >=14}
-
   postcss@8.5.10:
     resolution: {integrity: sha512-pMMHxBOZKFU6HgAZ4eyGnwXF/EvPGGqUr0MnZ5+99485wwW41kW91A4LOGxSHhgugZmSChL5AlElNdwlNgcnLQ==}
     engines: {node: ^10 || ^12 || >=14}
@@ -1973,9 +1972,9 @@ packages:
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
 
-  protobufjs@6.11.5:
-    resolution: {integrity: sha512-OKjVH3hDoXdIZ/s5MLv8O2X0s+wOxGfV7ar6WFSKGaSAxi/6gYn3px5POS4vi+mc/0zCOdL7Jkwrj0oT1Yst2A==}
-    hasBin: true
+  protobufjs@7.5.5:
+    resolution: {integrity: sha512-3wY1AxV+VBNW8Yypfd1yQY9pXnqTAN+KwQxL8iYm3/BjKYMNg4i0owhEe26PWDOMaIrzeeF98Lqd5NGz4omiIg==}
+    engines: {node: '>=12.0.0'}
 
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
@@ -2231,16 +2230,8 @@ packages:
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
-  uuid@10.0.0:
-    resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
-    hasBin: true
-
-  uuid@11.1.0:
-    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
-    hasBin: true
-
-  uuid@13.0.0:
-    resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
+  uuid@14.0.0:
+    resolution: {integrity: sha512-Qo+uWgilfSmAhXCMav1uYFynlQO7fMFiMVZsQqZRMIXp0O7rR7qjkj+cPvBHLgBqi960QCoo/PH2/6ZtVqKvrg==}
     hasBin: true
 
   which-boxed-primitive@1.1.1:
@@ -2628,7 +2619,7 @@ snapshots:
       langsmith: 0.5.24(openai@6.34.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0)
       mustache: 4.2.0
       p-queue: 6.6.2
-      uuid: 11.1.0
+      uuid: 14.0.0
       zod: 4.3.6
     transitivePeerDependencies:
       - '@opentelemetry/api'
@@ -2640,14 +2631,14 @@ snapshots:
   '@langchain/langgraph-checkpoint@1.0.1(@langchain/core@1.1.41(openai@6.34.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0))':
     dependencies:
       '@langchain/core': 1.1.41(openai@6.34.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0)
-      uuid: 10.0.0
+      uuid: 14.0.0
 
   '@langchain/langgraph-sdk@1.8.9(@langchain/core@1.1.41(openai@6.34.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
       '@types/json-schema': 7.0.15
       p-queue: 9.1.2
       p-retry: 7.1.1
-      uuid: 13.0.0
+      uuid: 14.0.0
     optionalDependencies:
       '@langchain/core': 1.1.41(openai@6.34.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0)
       react: 19.2.4
@@ -2659,7 +2650,7 @@ snapshots:
       '@langchain/langgraph-checkpoint': 1.0.1(@langchain/core@1.1.41(openai@6.34.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0))
       '@langchain/langgraph-sdk': 1.8.9(@langchain/core@1.1.41(openai@6.34.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@standard-schema/spec': 1.1.0
-      uuid: 10.0.0
+      uuid: 14.0.0
       zod: 4.3.6
     transitivePeerDependencies:
       - react
@@ -2868,8 +2859,6 @@ snapshots:
   '@types/json-schema@7.0.15': {}
 
   '@types/json5@0.0.29': {}
-
-  '@types/long@4.0.2': {}
 
   '@types/node@20.19.39':
     dependencies:
@@ -4034,6 +4023,8 @@ snapshots:
 
   long@4.0.0: {}
 
+  long@5.3.2: {}
+
   loose-envify@1.4.0:
     dependencies:
       js-tokens: 4.0.0
@@ -4093,7 +4084,7 @@ snapshots:
       '@swc/helpers': 0.5.15
       baseline-browser-mapping: 2.10.21
       caniuse-lite: 1.0.30001790
-      postcss: 8.4.31
+      postcss: 8.5.10
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
       styled-jsx: 5.1.6(@babel/core@7.29.0)(react@19.2.4)
@@ -4164,7 +4155,7 @@ snapshots:
 
   onnx-proto@4.0.4:
     dependencies:
-      protobufjs: 6.11.5
+      protobufjs: 7.5.5
 
   onnxruntime-common@1.14.0: {}
 
@@ -4254,12 +4245,6 @@ snapshots:
 
   possible-typed-array-names@1.1.0: {}
 
-  postcss@8.4.31:
-    dependencies:
-      nanoid: 3.3.11
-      picocolors: 1.1.1
-      source-map-js: 1.2.1
-
   postcss@8.5.10:
     dependencies:
       nanoid: 3.3.11
@@ -4274,7 +4259,7 @@ snapshots:
       object-assign: 4.1.1
       react-is: 16.13.1
 
-  protobufjs@6.11.5:
+  protobufjs@7.5.5:
     dependencies:
       '@protobufjs/aspromise': 1.1.2
       '@protobufjs/base64': 1.1.2
@@ -4286,9 +4271,8 @@ snapshots:
       '@protobufjs/path': 1.1.2
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.0
-      '@types/long': 4.0.2
       '@types/node': 20.19.39
-      long: 4.0.0
+      long: 5.3.2
 
   punycode@2.3.1: {}
 
@@ -4651,11 +4635,7 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
-  uuid@10.0.0: {}
-
-  uuid@11.1.0: {}
-
-  uuid@13.0.0: {}
+  uuid@14.0.0: {}
 
   which-boxed-primitive@1.1.1:
     dependencies:
