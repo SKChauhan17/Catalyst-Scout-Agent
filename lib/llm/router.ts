@@ -177,27 +177,32 @@ export async function invokeLLM(req: LLMRequest): Promise<string> {
 
   for (let i = 0; i < TIERS.length; i++) {
     const tier = TIERS[i];
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), 30000); // 30s timeout
+
     try {
       const result = await tier.invoke(req);
+      clearTimeout(timeoutId);
       if (result && result.trim().length > 0) {
         console.log(`[LLM Router] ✅ SUCCESS: Tier ${i + 1} (${tier.name}) fulfilled the request.`);
         return result;
       }
       console.warn(`[LLM Router] ⚠️ Tier ${i + 1} (${tier.name}) returned an empty response. Trying next...`);
     } catch (err: unknown) {
-      if (isRetryable(err)) {
-        const msg = err instanceof Error ? err.message : String(err);
+      clearTimeout(timeoutId);
+      const isTimeout = err instanceof Error && err.name === 'AbortError';
+      if (isRetryable(err) || isTimeout) {
+        const msg = isTimeout ? 'Request timed out after 30s' : (err instanceof Error ? err.message : String(err));
         const nextTier = TIERS[i + 1];
-        lastError = err instanceof Error ? err : new Error(msg);
+        lastError = isTimeout ? new Error(msg) : (err instanceof Error ? err : new Error(msg));
 
         if (nextTier) {
           console.warn(
-            `[LLM Router] [FALLBACK] Tier ${i + 1} (${tier.name}) failed → ${msg.slice(0, 80)}. Shifting to Tier ${i + 2}: ${nextTier.name}...`
+            `[LLM Router] [FALLBACK] Tier ${i + 1} (${tier.name}) ${isTimeout ? 'timed out' : 'failed'} → ${msg.slice(0, 80)}. Shifting to Tier ${i + 2}: ${nextTier.name}...`
           );
         }
         continue;
       }
-      // Non-retryable (auth error, bad request, etc.) — re-throw immediately
       throw err;
     }
   }
