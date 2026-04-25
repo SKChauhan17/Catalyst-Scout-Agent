@@ -5,7 +5,7 @@ import { Zap } from 'lucide-react';
 
 export default function DashboardPage() {
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#050507]">
+    <div className="flex flex-col h-screen overflow-x-hidden bg-[#050507]">
       {/* Top Navigation */}
       <header
         className="flex items-center justify-between px-6 py-3 shrink-0 border-b"
@@ -49,8 +49,8 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Two-column layout */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* Responsive layout: stacked on mobile, two-column on desktop */}
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         <DashboardSidebar />
         <ResultsFeed />
       </div>

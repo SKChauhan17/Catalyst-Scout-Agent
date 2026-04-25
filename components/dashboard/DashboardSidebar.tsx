@@ -104,7 +104,7 @@ export default function DashboardSidebar() {
 
   return (
     <aside
-      className="w-[420px] shrink-0 flex flex-col border-r overflow-hidden"
+      className="w-full lg:w-[420px] shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r overflow-y-auto lg:overflow-hidden"
       style={{ backgroundColor: '#0f1011', borderColor: 'rgba(255,255,255,0.05)' }}
     >
       {/* JD Input Section */}
