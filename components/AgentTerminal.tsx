@@ -170,7 +170,7 @@ export default function AgentTerminal({
       if (data && data.length > 0) {
         // Clear existing local logs and replace with history to avoid duplicates
         // In a real app, we'd be more careful with deduplication
-        (data as any[]).forEach((row) => addLog(row.message));
+        (data as { message: string }[]).forEach((row) => addLog(row.message));
       }
     };
 
