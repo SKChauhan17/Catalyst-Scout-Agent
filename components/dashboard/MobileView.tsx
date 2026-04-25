@@ -6,6 +6,31 @@ import { Search, Sparkles, RotateCcw, ChevronDown, Terminal, Users } from 'lucid
 import { useScoutStore } from '@/lib/store/useScoutStore';
 import AgentTerminal from '@/components/AgentTerminal';
 import CandidateCard from '@/components/CandidateCard';
+import BYODController from '@/components/dashboard/BYODController';
+import { streamScout } from '@/lib/scout/streamScout';
+
+const MAC_LAYOUT_SPRING = {
+  type: 'spring',
+  stiffness: 280,
+  damping: 30,
+  mass: 0.95,
+} as const;
+
+const MAC_EASE = [0.22, 1, 0.36, 1] as const;
+
+const MAC_REVEAL_TRANSITION = {
+  height: MAC_LAYOUT_SPRING,
+  opacity: { duration: 0.2, ease: MAC_EASE },
+  filter: { duration: 0.24, ease: MAC_EASE },
+  scaleY: { duration: 0.24, ease: MAC_EASE },
+} as const;
+
+const MOBILE_COLLAPSE_TRANSITION = {
+  height: MAC_LAYOUT_SPRING,
+  opacity: { duration: 0.08, ease: MAC_EASE },
+  filter: { duration: 0.08, ease: MAC_EASE },
+  scaleY: { duration: 0.12, ease: MAC_EASE },
+} as const;
 
 // ── AI Enhancer (same logic as DashboardSidebar) ──────────────
 const ENHANCED_TEMPLATE = (input: string) =>
@@ -45,14 +70,17 @@ function AccordionTab({
   onToggle: () => void;
 }) {
   return (
-    <button
+    <motion.button
+      layout
       id={id}
       onClick={onToggle}
       className="w-full flex items-center justify-between px-4 py-3 transition-colors hover:bg-white/[0.03]"
+      whileTap={{ scale: 0.985 }}
+      transition={MAC_LAYOUT_SPRING}
       style={{
         backgroundColor: '#0a0a0a',
         borderTop: '1px solid rgba(255,255,255,0.06)',
-        borderBottom: open ? 'none' : '1px solid rgba(255,255,255,0.06)',
+        borderBottom: '1px solid transparent',
       }}
     >
       <div className="flex items-center gap-2">
@@ -79,18 +107,18 @@ function AccordionTab({
       </div>
       <motion.div
         animate={{ rotate: open ? 180 : 0 }}
-        transition={{ duration: 0.2 }}
+        transition={MAC_LAYOUT_SPRING}
       >
         <ChevronDown className="w-3.5 h-3.5" style={{ color: '#8b949e' }} />
       </motion.div>
-    </button>
+    </motion.button>
   );
 }
 
 // ── Main mobile layout component ──────────────────────────────
 export default function MobileView() {
   const {
-    rawJD, setJD, logs, results, isScouting,
+    rawJD, setJD, logs, results, customCandidates, isScouting,
     startScout, abortScout, finishScout, addLog, addResult, clearSession,
   } = useScoutStore();
 
@@ -108,48 +136,17 @@ export default function MobileView() {
     abortRef.current = controller;
 
     try {
-      const response = await fetch('/api/scout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rawJD }),
+      await streamScout({
+        rawJD,
+        customCandidates,
         signal: controller.signal,
+        onLog: addLog,
+        onCandidate: (candidate) => {
+          addResult(candidate);
+          setCandidatesOpen(true);
+        },
+        onDone: finishScout,
       });
-
-      if (!response.ok || !response.body) throw new Error(`API error: ${response.status}`);
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop() ?? '';
-
-        for (const part of parts) {
-          const lines = part.split('\n');
-          let eventType = 'message';
-          let dataStr = '';
-          for (const line of lines) {
-            if (line.startsWith('event: ')) eventType = line.slice(7).trim();
-            if (line.startsWith('data: ')) dataStr = line.slice(6).trim();
-          }
-          if (!dataStr) continue;
-          const data = JSON.parse(dataStr);
-          if (eventType === 'log') addLog(data.message);
-          if (eventType === 'candidate') {
-            addResult(data);
-            setCandidatesOpen(true);  // Auto-open candidates tab when first result arrives
-          }
-          if (eventType === 'done' || eventType === 'error') {
-            if (eventType === 'error') addLog(`❌ ${data.message}`);
-            finishScout();
-          }
-        }
-      }
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== 'AbortError') addLog(`❌ ${err.message}`);
     } finally {
@@ -220,8 +217,11 @@ export default function MobileView() {
           }}
         />
 
+        <BYODController context="mobile" />
+
         {/* Scout CTA */}
         <button
+          id="mobile-scout-button"
           onClick={isScouting ? abortScout : handleScout}
           disabled={!rawJD.trim() && !isScouting}
           className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-full text-[13px] font-[500] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 active:scale-[0.98]"
@@ -265,7 +265,7 @@ export default function MobileView() {
       </section>
 
       {/* ── Section 2: Agent Execution Log (collapsible) ── */}
-      <section className="shrink-0">
+      <motion.section layout transition={MAC_LAYOUT_SPRING} className="shrink-0">
         <AccordionTab
           id="mobile-terminal-tab"
           label="Agent Execution Log"
@@ -277,24 +277,38 @@ export default function MobileView() {
         <AnimatePresence initial={false}>
           {terminalOpen && (
             <motion.div
+              layout
               key="terminal-body"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 280, opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: 'easeInOut' }}
-              style={{ overflow: 'hidden', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+              initial={{ height: 0, opacity: 0, filter: 'blur(10px)', scaleY: 0.98 }}
+              animate={{ height: 288, opacity: 1, filter: 'blur(0px)', scaleY: 1 }}
+              exit={{
+                height: 0,
+                opacity: 0,
+                filter: 'blur(4px)',
+                scaleY: 0.995,
+                transition: MOBILE_COLLAPSE_TRANSITION,
+              }}
+              transition={MAC_REVEAL_TRANSITION}
+              style={{
+                overflow: 'hidden',
+                transformOrigin: 'top',
+                backgroundColor: '#101010',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+              }}
             >
-              <AgentTerminal
-                logs={logs.map((l) => l.message)}
-                status={terminalStatus}
-              />
+              <div className="h-72">
+                <AgentTerminal
+                  logs={logs.map((l) => l.message)}
+                  status={terminalStatus}
+                />
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
-      </section>
+      </motion.section>
 
       {/* ── Section 3: Evaluated Candidates (collapsible) ── */}
-      <section className="shrink-0">
+      <motion.section layout transition={MAC_LAYOUT_SPRING} className="shrink-0">
         <AccordionTab
           id="mobile-candidates-tab"
           label="Evaluated Candidates"
@@ -306,12 +320,13 @@ export default function MobileView() {
         <AnimatePresence initial={false}>
           {candidatesOpen && (
             <motion.div
+              layout
               key="candidates-body"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: 'easeInOut' }}
-              style={{ overflow: 'hidden' }}
+              initial={{ height: 0, opacity: 0, filter: 'blur(10px)', scaleY: 0.98 }}
+              animate={{ height: 'auto', opacity: 1, filter: 'blur(0px)', scaleY: 1 }}
+              exit={{ height: 0, opacity: 0, filter: 'blur(10px)', scaleY: 0.98 }}
+              transition={MAC_REVEAL_TRANSITION}
+              style={{ overflow: 'hidden', transformOrigin: 'top' }}
             >
               <div className="p-4 space-y-3" style={{ backgroundColor: '#050507' }}>
                 {results.length === 0 && (
@@ -325,9 +340,13 @@ export default function MobileView() {
                 {results.map((c, i) => (
                   <motion.div
                     key={c.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: i * 0.05 }}
+                    initial={{ opacity: 0, y: 14, filter: 'blur(6px)' }}
+                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                    transition={{
+                      y: { ...MAC_LAYOUT_SPRING, delay: i * 0.04 },
+                      opacity: { duration: 0.2, ease: MAC_EASE, delay: i * 0.04 },
+                      filter: { duration: 0.22, ease: MAC_EASE, delay: i * 0.04 },
+                    }}
                   >
                     <CandidateCard candidate={c} rank={i + 1} />
                   </motion.div>
@@ -353,7 +372,7 @@ export default function MobileView() {
             </motion.div>
           )}
         </AnimatePresence>
-      </section>
+      </motion.section>
 
     </div>
   );

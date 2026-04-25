@@ -14,6 +14,18 @@ export interface Candidate {
 }
 
 // ============================================================
+// User-provided candidates loaded through the BYOD flow
+// ============================================================
+export interface CustomCandidate {
+  id: string;
+  name: string;
+  skills: string[];
+  experience: string;
+  location: string;
+  salary_expectation: string;
+}
+
+// ============================================================
 // Parsed structure extracted from the raw Job Description
 // ============================================================
 export interface ParsedJD {
@@ -58,6 +70,12 @@ export const AgentStateAnnotation = Annotation.Root({
   parsedJD: Annotation<ParsedJD | null>({
     reducer: (_, next) => next,
     default: () => null,
+  }),
+
+  // User-supplied candidates that bypass Supabase retrieval
+  customCandidates: Annotation<CustomCandidate[]>({
+    reducer: (_, next) => next,
+    default: () => [],
   }),
 
   // Top candidates returned from the hybrid Supabase RPC

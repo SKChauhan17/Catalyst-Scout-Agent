@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { EvaluatedCandidate } from '@/components/CandidateCard';
+import type { CustomCandidate } from '@/lib/agent/state';
 
 // ============================================================
 // Types
@@ -16,6 +17,7 @@ interface ScoutStore {
   rawJD: string;
   logs: LogEntry[];
   results: EvaluatedCandidate[];
+  customCandidates: CustomCandidate[];
   isScouting: boolean;
   isTerminalExpanded: boolean;
   abortController: AbortController | null;
@@ -24,6 +26,8 @@ interface ScoutStore {
   setJD: (jd: string) => void;
   addLog: (message: string) => void;
   addResult: (candidate: EvaluatedCandidate) => void;
+  addCustomCandidate: (candidate: CustomCandidate) => void;
+  addCustomCandidates: (candidates: CustomCandidate[]) => void;
   clearSession: () => void;
   startScout: () => AbortController;
   abortScout: () => void;
@@ -38,6 +42,7 @@ export const useScoutStore = create<ScoutStore>()(
       rawJD: '',
       logs: [],
       results: [],
+      customCandidates: [],
       isScouting: false,
       isTerminalExpanded: false,
       abortController: null,
@@ -60,9 +65,26 @@ export const useScoutStore = create<ScoutStore>()(
           ),
         })),
 
+      addCustomCandidate: (candidate) =>
+        set((state) => ({
+          customCandidates: [...state.customCandidates, candidate],
+        })),
+
+      addCustomCandidates: (candidates) =>
+        set((state) => ({
+          customCandidates: [...state.customCandidates, ...candidates],
+        })),
+
       // Wipes entire session — JD, logs, results
       clearSession: () =>
-        set({ rawJD: '', logs: [], results: [], isScouting: false, abortController: null }),
+        set({
+          rawJD: '',
+          logs: [],
+          results: [],
+          customCandidates: [],
+          isScouting: false,
+          abortController: null,
+        }),
 
       // Creates and stores an AbortController for the active SSE stream
       startScout: () => {
@@ -91,6 +113,7 @@ export const useScoutStore = create<ScoutStore>()(
         rawJD: state.rawJD,
         logs: state.logs,
         results: state.results,
+        customCandidates: state.customCandidates,
       }),
     }
   )

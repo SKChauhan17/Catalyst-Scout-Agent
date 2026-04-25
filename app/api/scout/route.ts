@@ -1,5 +1,10 @@
 import { catalystScoutGraph } from '@/lib/agent/graph';
-import type { AgentState, Candidate, CandidateEvaluation } from '@/lib/agent/state';
+import type {
+  AgentState,
+  Candidate,
+  CandidateEvaluation,
+  CustomCandidate,
+} from '@/lib/agent/state';
 
 export const runtime = 'nodejs';
 // Allow up to 5 minutes for the full LangGraph pipeline
@@ -17,9 +22,53 @@ interface EvaluatedCandidate {
   chat_transcript: Array<{ role: 'recruiter' | 'candidate'; content: string }>;
 }
 
+function sanitizeCustomCandidates(input: unknown): CustomCandidate[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input.flatMap((candidate) => {
+    if (typeof candidate !== 'object' || candidate === null) {
+      return [];
+    }
+
+    const record = candidate as Record<string, unknown>;
+    const name = typeof record.name === 'string' ? record.name.trim() : '';
+    const rawSkills = Array.isArray(record.skills)
+      ? record.skills.map((skill) => String(skill).trim()).filter(Boolean)
+      : [];
+
+    if (!name || rawSkills.length === 0) {
+      return [];
+    }
+
+    return [{
+      id:
+        typeof record.id === 'string' && record.id.trim().length > 0
+          ? record.id.trim()
+          : `custom-${crypto.randomUUID()}`,
+      name,
+      skills: rawSkills,
+      experience:
+        typeof record.experience === 'string' && record.experience.trim().length > 0
+          ? record.experience.trim()
+          : 'Not specified',
+      location:
+        typeof record.location === 'string' && record.location.trim().length > 0
+          ? record.location.trim()
+          : 'Not specified',
+      salary_expectation:
+        typeof record.salary_expectation === 'string' && record.salary_expectation.trim().length > 0
+          ? record.salary_expectation.trim()
+          : 'Not specified',
+    }];
+  });
+}
+
 export async function POST(req: Request): Promise<Response> {
   const body = await req.json();
   const rawJD: string = body?.rawJD?.trim();
+  const customCandidates = sanitizeCustomCandidates(body?.customCandidates);
 
   if (!rawJD) {
     return Response.json({ error: 'rawJD is required' }, { status: 400 });
@@ -36,10 +85,16 @@ export async function POST(req: Request): Promise<Response> {
 
       try {
         emit('log', { message: '🚀 Initializing Catalyst Scout Agent...' });
+        if (customCandidates.length > 0) {
+          emit('log', {
+            message: `📦 BYOD mode active — ${customCandidates.length} custom candidates loaded into memory.`,
+          });
+        }
 
         const initialState: Partial<AgentState> = {
           rawJD,
           parsedJD: null,
+          customCandidates,
           retrievedCandidates: [],
           evaluations: [],
           currentCandidateIndex: 0,
@@ -66,7 +121,10 @@ export async function POST(req: Request): Promise<Response> {
           } else if (nodeName === 'retrieveMatch') {
             retrievedCandidates = nodeOutput.retrievedCandidates ?? [];
             emit('log', {
-              message: `✓ [retrieveMatch] ${retrievedCandidates.length} candidates retrieved via hybrid search`,
+              message:
+                customCandidates.length > 0
+                  ? `✓ [retrieveMatch] ${retrievedCandidates.length} candidates selected from the BYOD dataset`
+                  : `✓ [retrieveMatch] ${retrievedCandidates.length} candidates retrieved via hybrid search`,
             });
           } else if (nodeName === 'simulateChat') {
             const evalCount = (nodeOutput.evaluations ?? []).length;

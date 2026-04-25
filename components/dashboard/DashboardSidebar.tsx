@@ -1,9 +1,19 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Search, Sparkles, RotateCcw } from 'lucide-react';
 import { useScoutStore } from '@/lib/store/useScoutStore';
 import AgentTerminal from '@/components/AgentTerminal';
+import BYODController from '@/components/dashboard/BYODController';
+import { streamScout } from '@/lib/scout/streamScout';
+
+const MAC_LAYOUT_SPRING = {
+  type: 'spring',
+  stiffness: 280,
+  damping: 30,
+  mass: 0.95,
+} as const;
 
 // ── AI Enhancer: typing-effect JD expansion ───────────────────
 const ENHANCED_TEMPLATE = (input: string) => `We are looking for a ${input}.
@@ -27,60 +37,29 @@ async function runEnhancer(
 
 // ─────────────────────────────────────────────────────────────
 export default function DashboardSidebar() {
-  const { rawJD, setJD, logs, isScouting, startScout, abortScout, finishScout, addLog, addResult, clearSession } =
+  const { rawJD, setJD, logs, customCandidates, isScouting, startScout, abortScout, finishScout, addLog, addResult, clearSession } =
     useScoutStore();
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const [terminalCollapsed, setTerminalCollapsed] = useState(true);
   const abortRef = useRef<AbortController | null>(null);
 
   // ── Scout handler ──────────────────────────────────────────
   async function handleScout() {
     if (!rawJD.trim() || isScouting) return;
+    setTerminalCollapsed(false);
 
     const controller = startScout();
     abortRef.current = controller;
 
     try {
-      const response = await fetch('/api/scout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rawJD }),
+      await streamScout({
+        rawJD,
+        customCandidates,
         signal: controller.signal,
+        onLog: addLog,
+        onCandidate: addResult,
+        onDone: finishScout,
       });
-
-      if (!response.ok || !response.body) {
-        throw new Error(`API error: ${response.status}`);
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop() ?? '';
-
-        for (const part of parts) {
-          const lines = part.split('\n');
-          let eventType = 'message';
-          let dataStr = '';
-          for (const line of lines) {
-            if (line.startsWith('event: ')) eventType = line.slice(7).trim();
-            if (line.startsWith('data: ')) dataStr = line.slice(6).trim();
-          }
-          if (!dataStr) continue;
-          const data = JSON.parse(dataStr);
-          if (eventType === 'log') addLog(data.message);
-          if (eventType === 'candidate') addResult(data);
-          if (eventType === 'done' || eventType === 'error') {
-            if (eventType === 'error') addLog(`❌ ${data.message}`);
-            finishScout();
-          }
-        }
-      }
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== 'AbortError') {
         addLog(`❌ ${err.message}`);
@@ -103,16 +82,27 @@ export default function DashboardSidebar() {
   }
 
   return (
-    <aside
-      className="w-full lg:w-[420px] shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r overflow-y-auto lg:overflow-hidden max-h-[60vh] lg:max-h-none"
+    <motion.aside
+      layout
+      className="w-full lg:w-[420px] shrink-0 min-h-0 flex flex-col overflow-hidden border-b lg:border-b-0 lg:border-r"
       style={{ backgroundColor: '#0f1011', borderColor: 'rgba(255,255,255,0.05)' }}
+      transition={MAC_LAYOUT_SPRING}
     >
       {/* JD Input Section */}
-      <div className="p-5 border-b shrink-0" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+      <motion.div
+        layout
+        transition={MAC_LAYOUT_SPRING}
+        className={`overflow-y-auto border-b p-5 ${terminalCollapsed ? 'min-h-0 flex-1' : 'shrink-0'}`}
+        style={{
+          borderColor: 'rgba(255,255,255,0.05)',
+          height: terminalCollapsed ? undefined : 'min(34rem, 58vh)',
+          willChange: 'height',
+        }}
+      >
         {/* Label row */}
         <div className="flex items-center justify-between mb-2">
           <label
-            htmlFor="jd-input"
+            htmlFor="desktop-jd-input"
             className="text-[11px] uppercase tracking-[0.12em]"
             style={{ fontFamily: 'var(--font-geist-mono)', color: '#8b949e' }}
           >
@@ -138,7 +128,7 @@ export default function DashboardSidebar() {
         </div>
 
         <textarea
-          id="jd-input"
+          id="desktop-jd-input"
           value={rawJD}
           onChange={(e) => setJD(e.target.value)}
           placeholder="Paste a job description, or type a role and click ✨ Enhance..."
@@ -153,9 +143,11 @@ export default function DashboardSidebar() {
           }}
         />
 
+        <BYODController context="desktop" />
+
         {/* Scout CTA */}
         <button
-          id="scout-button"
+          id="desktop-scout-button"
           onClick={isScouting ? abortScout : handleScout}
           disabled={!rawJD.trim() && !isScouting}
           className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-full text-[13px] font-[500] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 active:scale-[0.98]"
@@ -196,17 +188,25 @@ export default function DashboardSidebar() {
           <RotateCcw className="w-3 h-3" />
           Reset Session
         </button>
-      </div>
+      </motion.div>
 
       {/* Agent Terminal */}
-      <div id="agent-terminal" className="flex-1 min-h-0">
+      <motion.div
+        layout
+        transition={MAC_LAYOUT_SPRING}
+        className={`overflow-hidden ${terminalCollapsed ? 'shrink-0' : 'min-h-0 flex-1'}`}
+      >
         <AgentTerminal
+          headerId="desktop-terminal-toggle"
+          collapsible
+          collapsed={terminalCollapsed}
+          onToggleCollapsed={() => setTerminalCollapsed((current) => !current)}
           logs={logs.map((l) => l.message)}
           status={
             isScouting ? 'running' : logs.length > 0 ? 'done' : 'idle'
           }
         />
-      </div>
-    </aside>
+      </motion.div>
+    </motion.aside>
   );
 }
