@@ -35,21 +35,20 @@ const cerebras = new OpenAI({
   apiKey: process.env.CEREBRAS_API_KEY ?? '',
 });
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY ?? '');
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '');
 
 // ============================================================
 // Tier 5 — Gemini vertical fallback
-// Top 5 models from the Gemini API listed once, ordered by
-// capability descending: 2.5-pro → 2.0-flash → 1.5-pro →
-// 1.5-flash → 1.0-pro
-// Source: https://ai.google.dev/gemini-api/docs/models
+// Top 5 text-reasoning models from a live GET /v1beta/models
+// call (run 2026-04-25), ordered by capability descending.
+// Excludes: TTS, image, robotics, research, and Gemma variants.
 // ============================================================
 const GEMINI_MODELS = [
-  'gemini-2.5-pro-preview-03-25', // Most capable — extended thinking
-  'gemini-2.0-flash',             // Fast + capable, latest stable
-  'gemini-1.5-pro',               // Long context, high intelligence
-  'gemini-1.5-flash',             // Balanced speed/quality
-  'gemini-1.0-pro',               // Legacy fallback
+  'gemini-3.1-pro-preview',  // Newest — highest reasoning capability
+  'gemini-3-pro-preview',    // Previous gen Pro
+  'gemini-2.5-pro',          // Latest stable Pro
+  'gemini-2.5-flash',        // Fast + highly capable
+  'gemini-2.0-flash',        // Proven stable fallback
 ] as const;
 
 async function invokeGeminiCascade(req: LLMRequest): Promise<string> {
