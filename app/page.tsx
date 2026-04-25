@@ -52,19 +52,6 @@ export default function LandingPage() {
             Catalyst Scout
           </span>
         </div>
-
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-1.5 text-[13px] px-4 py-1.5 rounded-full transition-all hover:brightness-110"
-          style={{
-            backgroundColor: '#0f0f0f',
-            border: '1px solid #fafafa',
-            color: '#2fd6a1',
-            fontFamily: 'var(--font-geist-sans)',
-          }}
-        >
-          Dashboard <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
       </nav>
 
       {/* ── Hero ── */}
