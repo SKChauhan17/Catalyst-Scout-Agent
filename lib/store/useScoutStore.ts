@@ -60,9 +60,9 @@ export const useScoutStore = create<ScoutStore>()(
           ),
         })),
 
-      // Wipes results + logs for a clean new session
+      // Wipes entire session — JD, logs, results
       clearSession: () =>
-        set({ logs: [], results: [], isScouting: false, abortController: null }),
+        set({ rawJD: '', logs: [], results: [], isScouting: false, abortController: null }),
 
       // Creates and stores an AbortController for the active SSE stream
       startScout: () => {
@@ -85,7 +85,7 @@ export const useScoutStore = create<ScoutStore>()(
     }),
     {
       name: 'catalyst-scout-session',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
       // isTerminalExpanded intentionally excluded — always resets to false on refresh
       partialize: (state) => ({
         rawJD: state.rawJD,
