@@ -1,7 +1,8 @@
+import Link from 'next/link';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
 import ResultsFeed from '@/components/dashboard/ResultsFeed';
 import ProductTour from '@/components/ProductTour';
-import { Zap } from 'lucide-react';
+import { Zap, ChevronLeft } from 'lucide-react';
 
 export default function DashboardPage() {
   return (
@@ -37,9 +38,21 @@ export default function DashboardPage() {
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Link
+            href="/"
+            className="flex items-center gap-1 text-[12px] px-2.5 py-1.5 rounded-md transition-colors hover:bg-white/5"
+            style={{
+              fontFamily: 'var(--font-geist-mono)',
+              color: '#8b949e',
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}
+          >
+            <ChevronLeft className="w-3 h-3" />
+            Home
+          </Link>
           <span
-            className="text-[12px]"
+            className="text-[12px] hidden sm:block"
             style={{ fontFamily: 'var(--font-geist-mono)', color: '#8b949e' }}
           >
             Mission Control
