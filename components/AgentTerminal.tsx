@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronDown } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useScoutStore } from '@/lib/store/useScoutStore';
 
 export type AgentStatus = 'idle' | 'running' | 'done' | 'error';
@@ -9,7 +11,26 @@ export type AgentStatus = 'idle' | 'running' | 'done' | 'error';
 interface AgentTerminalProps {
   logs: string[];
   status: AgentStatus;
+  collapsible?: boolean;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
+  headerId?: string;
 }
+
+const MAC_SPRING = {
+  type: 'spring',
+  stiffness: 280,
+  damping: 30,
+  mass: 0.95,
+} as const;
+
+const MAC_EASE = [0.22, 1, 0.36, 1] as const;
+
+const BODY_REVEAL_TRANSITION = {
+  flexGrow: MAC_SPRING,
+  opacity: { duration: 0.16, ease: MAC_EASE },
+  y: { duration: 0.18, ease: MAC_EASE },
+} as const;
 
 const NODE_PILLS: Record<string, string> = {
   parsejd: 'JD Parser',
@@ -63,7 +84,14 @@ function exportSession(
   URL.revokeObjectURL(url);
 }
 
-export default function AgentTerminal({ logs, status }: AgentTerminalProps) {
+export default function AgentTerminal({
+  logs,
+  status,
+  collapsible = false,
+  collapsed = false,
+  onToggleCollapsed,
+  headerId,
+}: AgentTerminalProps) {
   const {
     rawJD,
     logs: storeLogs,
@@ -95,34 +123,70 @@ export default function AgentTerminal({ logs, status }: AgentTerminalProps) {
     });
   }
 
+  const canCollapseInline = collapsible && !isTerminalExpanded;
+  const isCollapsed = canCollapseInline && collapsed;
+  const canToggleFromHeader = canCollapseInline && typeof onToggleCollapsed === 'function';
+
   // 🟢 Toggle expanded / normal
   function handleGreen() {
+    if (canCollapseInline && collapsed && onToggleCollapsed) {
+      onToggleCollapsed();
+    }
     toggleTerminalSize();
+  }
+
+  function handleHeaderClick() {
+    if (canToggleFromHeader) onToggleCollapsed?.();
+  }
+
+  function handleHeaderKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (!canToggleFromHeader || (event.key !== 'Enter' && event.key !== ' ')) return;
+    event.preventDefault();
+    onToggleCollapsed?.();
   }
 
   // The actual terminal pane — shared between sidebar and modal
   const terminalPane = (
-    <div className="flex flex-col h-full">
+    <motion.div
+      layout
+      initial={false}
+      transition={MAC_SPRING}
+      className={`flex min-h-0 flex-col ${isCollapsed ? '' : 'h-full'}`}
+    >
       {/* Header bar */}
       <div
-        className="flex items-center gap-2 px-4 py-2.5 border-b shrink-0"
+        id={headerId}
+        onClick={handleHeaderClick}
+        onKeyDown={handleHeaderKeyDown}
+        tabIndex={canToggleFromHeader ? 0 : undefined}
+        aria-expanded={canToggleFromHeader ? !collapsed : undefined}
+        className={`flex items-center gap-2 px-4 py-2.5 border-b shrink-0 ${canToggleFromHeader ? 'cursor-pointer' : ''}`}
         style={{ backgroundColor: '#0a0a0a', borderColor: 'rgba(255,255,255,0.05)' }}
       >
         {/* Mac traffic lights — always rendered */}
         <button
-          onClick={handleRed}
+          onClick={(event) => {
+            event.stopPropagation();
+            handleRed();
+          }}
           title="Export session as JSON"
           className="w-2.5 h-2.5 rounded-full transition-opacity hover:opacity-70 focus:outline-none"
           style={{ backgroundColor: exportFlash ? '#00d992' : '#ff5f56' }}
         />
         <button
-          onClick={handleYellow}
+          onClick={(event) => {
+            event.stopPropagation();
+            handleYellow();
+          }}
           title="Copy logs to clipboard"
           className="w-2.5 h-2.5 rounded-full transition-opacity hover:opacity-70 focus:outline-none"
           style={{ backgroundColor: '#ffbd2e' }}
         />
         <button
-          onClick={handleGreen}
+          onClick={(event) => {
+            event.stopPropagation();
+            handleGreen();
+          }}
           title={isTerminalExpanded ? 'Restore terminal' : 'Expand to full screen'}
           className="w-2.5 h-2.5 rounded-full transition-opacity hover:opacity-70 focus:outline-none"
           style={{ backgroundColor: '#27c93f' }}
@@ -188,75 +252,110 @@ export default function AgentTerminal({ logs, status }: AgentTerminalProps) {
               Standby
             </span>
           )}
+
+          {canToggleFromHeader && (
+            <motion.button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleCollapsed();
+              }}
+              title={collapsed ? 'Show execution log' : 'Collapse execution log'}
+              className="ml-1 rounded-md p-1 transition-colors hover:bg-white/5"
+              aria-label={collapsed ? 'Show execution log' : 'Collapse execution log'}
+              whileTap={{ scale: 0.92 }}
+            >
+              <motion.div
+                animate={{ rotate: collapsed ? 180 : 0 }}
+                transition={MAC_SPRING}
+              >
+                <ChevronDown className="h-3.5 w-3.5" style={{ color: '#8b949e' }} />
+              </motion.div>
+            </motion.button>
+          )}
         </div>
       </div>
 
       {/* Log body */}
-      <div
-        className="flex-1 overflow-y-auto p-4 space-y-1.5 inset-panel"
-        style={{ backgroundColor: '#101010' }}
-      >
-        {logs.length === 0 && status === 'idle' && (
-          <p className="text-[13px]" style={{ fontFamily: 'var(--font-geist-mono)', color: '#8b949e' }}>
-            <span style={{ color: '#00d992' }}>$</span> Awaiting job description...
-            <span className="cursor-blink ml-0.5">▌</span>
-          </p>
-        )}
-
-        {logs.map((log, i) => {
-          const pill = getNodePill(log);
-          return (
-            <div key={i} className="flex items-start gap-2">
-              <span
-                className="text-[11px] shrink-0 w-5 text-right select-none mt-px"
-                style={{ fontFamily: 'var(--font-geist-mono)', color: 'rgba(255,255,255,0.2)' }}
-              >
-                {i + 1}
-              </span>
-              {pill && (
-                <span
-                  className="shrink-0 text-[10px] font-[500] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded-full mt-px"
-                  style={{
-                    fontFamily: 'var(--font-geist-mono)',
-                    backgroundColor: 'rgba(0,217,146,0.1)',
-                    color: '#00d992',
-                    border: '1px solid rgba(0,217,146,0.2)',
-                  }}
-                >
-                  {pill}
-                </span>
+      <AnimatePresence initial={false}>
+        {!isCollapsed && (
+          <motion.div
+            key="terminal-log-body"
+            initial={{ flexGrow: 0, flexBasis: 0, opacity: 0, y: -6 }}
+            animate={{ flexGrow: 1, flexBasis: 0, opacity: 1, y: 0 }}
+            exit={{ flexGrow: 0, flexBasis: 0, opacity: 0, y: -6 }}
+            transition={BODY_REVEAL_TRANSITION}
+            className="min-h-0 overflow-hidden"
+            style={{ transformOrigin: 'top', willChange: 'opacity, transform' }}
+          >
+            <div
+              className="h-full overflow-y-auto p-4 space-y-1.5 inset-panel"
+              style={{ backgroundColor: '#101010' }}
+            >
+              {logs.length === 0 && status === 'idle' && (
+                <p className="text-[13px]" style={{ fontFamily: 'var(--font-geist-mono)', color: '#8b949e' }}>
+                  <span style={{ color: '#00d992' }}>$</span> Awaiting job description...
+                  <span className="cursor-blink ml-0.5">▌</span>
+                </p>
               )}
-              <span
-                className="text-[13px] leading-5 break-all"
-                style={{
-                  fontFamily: 'var(--font-geist-mono)',
-                  color: log.includes('✓') ? '#00d992' : log.includes('❌') || log.includes('[FALLBACK]') ? '#f87171' : '#f7f8f8',
-                }}
-              >
-                {log}
-              </span>
-            </div>
-          );
-        })}
 
-        {status === 'running' && (
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] w-5 text-right select-none" style={{ fontFamily: 'var(--font-geist-mono)', color: 'rgba(255,255,255,0.2)' }}>
-              {logs.length + 1}
-            </span>
-            <span className="text-[13px]" style={{ fontFamily: 'var(--font-geist-mono)', color: '#00d992' }}>
-              <span className="cursor-blink">▌</span>
-            </span>
-          </div>
+              {logs.map((log, i) => {
+                const pill = getNodePill(log);
+                return (
+                  <div key={i} className="flex items-start gap-2">
+                    <span
+                      className="text-[11px] shrink-0 w-5 text-right select-none mt-px"
+                      style={{ fontFamily: 'var(--font-geist-mono)', color: 'rgba(255,255,255,0.2)' }}
+                    >
+                      {i + 1}
+                    </span>
+                    {pill && (
+                      <span
+                        className="shrink-0 text-[10px] font-[500] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded-full mt-px"
+                        style={{
+                          fontFamily: 'var(--font-geist-mono)',
+                          backgroundColor: 'rgba(0,217,146,0.1)',
+                          color: '#00d992',
+                          border: '1px solid rgba(0,217,146,0.2)',
+                        }}
+                      >
+                        {pill}
+                      </span>
+                    )}
+                    <span
+                      className="text-[13px] leading-5 break-all"
+                      style={{
+                        fontFamily: 'var(--font-geist-mono)',
+                        color: log.includes('✓') ? '#00d992' : log.includes('❌') || log.includes('[FALLBACK]') ? '#f87171' : '#f7f8f8',
+                      }}
+                    >
+                      {log}
+                    </span>
+                  </div>
+                );
+              })}
+
+              {status === 'running' && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] w-5 text-right select-none" style={{ fontFamily: 'var(--font-geist-mono)', color: 'rgba(255,255,255,0.2)' }}>
+                    {logs.length + 1}
+                  </span>
+                  <span className="text-[13px]" style={{ fontFamily: 'var(--font-geist-mono)', color: '#00d992' }}>
+                    <span className="cursor-blink">▌</span>
+                  </span>
+                </div>
+              )}
+              <div ref={bottomRef} />
+            </div>
+          </motion.div>
         )}
-        <div ref={bottomRef} />
-      </div>
-    </div>
+      </AnimatePresence>
+    </motion.div>
   );
 
   // Expanded full-screen modal with click-outside-to-close backdrop
   if (isTerminalExpanded) {
-    return (
+    const expandedTerminal = (
       <AnimatePresence>
         <motion.div
           key="terminal-backdrop"
@@ -275,7 +374,11 @@ export default function AgentTerminal({ logs, status }: AgentTerminalProps) {
             initial={{ scale: 0.96, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.96, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={{
+              layout: MAC_SPRING,
+              scale: MAC_SPRING,
+              opacity: { duration: 0.22, ease: MAC_EASE },
+            }}
             className="w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden rounded-xl border"
             style={{ borderColor: 'rgba(0,217,146,0.2)', boxShadow: '0 0 60px rgba(0,217,146,0.06)' }}
             // Stop click propagation so clicking inside the panel doesn't close it
@@ -286,7 +389,18 @@ export default function AgentTerminal({ logs, status }: AgentTerminalProps) {
         </motion.div>
       </AnimatePresence>
     );
+
+    return typeof document === 'undefined'
+      ? null
+      : createPortal(expandedTerminal, document.body);
   }
 
-  return <div id="agent-terminal" className="flex flex-col h-full min-h-0">{terminalPane}</div>;
+  return (
+    <div
+      id="agent-terminal"
+      className={`flex flex-col ${isCollapsed ? '' : 'h-full min-h-0'}`}
+    >
+      {terminalPane}
+    </div>
+  );
 }
