@@ -72,8 +72,23 @@ Detailed technical documentation for core subsystems:
 | Module | Description | Link |
 | :--- | :--- | :--- |
 | **Agent Logic** | LangGraph state machine, nodes, and scoring logic. | [lib/agent/README.md](lib/agent/README.md) |
-| **Background Worker** | QStash handshake, execution security, and rate limiting. | [app/api/worker/README.md](app/api/worker/README.md) |
-| **UI Components** | Mission control dashboard, real-time terminal, and design system. | [components/README.md](components/README.md) |
+| **LLM Router** | 9-Tier "Immortal" time-sliced fallback waterfall. | [lib/llm/README.md](lib/llm/README.md) |
+| **Background Worker** | QStash handshake and execution security. | [app/api/README.md](app/api/README.md) |
+| **State Management** | Zustand stores, persistence, and WebSocket sync. | [lib/store/README.md](lib/store/README.md) |
+| **UI Components** | Dashboard, Terminal, and Design System. | [components/README.md](components/README.md) |
+
+---
+
+## Detailed Tech Stack
+
+| Layer | Technologies |
+| :--- | :--- |
+| **Frontend** | Next.js 16 (App Router), Tailwind CSS, Framer Motion |
+| **Agentic** | LangGraph.js, LangChain |
+| **LLMs** | Llama 3.3 (Groq/SambaNova), Claude 3.5 Sonnet, GPT-4o |
+| **Database** | Supabase (PostgreSQL), pgvector |
+| **Infrastructure** | Upstash QStash (Queue), Upstash Redis (Rate Limit) |
+| **State** | Zustand, Supabase Realtime (WebSockets) |
 
 ---
 

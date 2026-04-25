@@ -1,0 +1,10 @@
+<svg width="800" height="200" viewBox="0 0 800 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="200" fill="#050507"/>
+  <rect x="0.5" y="0.5" width="799" height="199" stroke="white" stroke-opacity="0.05"/>
+  <path d="M100 100H700" stroke="#00d992" stroke-opacity="0.2" stroke-width="1"/>
+  <circle cx="200" cy="100" r="4" fill="#00d992"/>
+  <circle cx="400" cy="100" r="4" fill="#00d992"/>
+  <circle cx="600" cy="100" r="4" fill="#00d992"/>
+  <text x="400" y="70" fill="#f7f8f8" font-family="Inter, sans-serif" font-size="32" font-weight="700" letter-spacing="-0.04em" text-anchor="middle">LLM WATERFALL</text>
+  <text x="400" y="140" fill="#00d992" font-family="Geist Mono, monospace" font-size="12" font-weight="500" letter-spacing="0.1em" text-anchor="middle">9-TIER TIME-SLICED ROUTER</text>
+</svg>

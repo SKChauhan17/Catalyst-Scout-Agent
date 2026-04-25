@@ -1,0 +1,10 @@
+<svg width="800" height="200" viewBox="0 0 800 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="200" fill="#050507"/>
+  <rect x="0.5" y="0.5" width="799" height="199" stroke="white" stroke-opacity="0.05"/>
+  <text x="400" y="100" fill="#f7f8f8" font-family="Inter, sans-serif" font-size="48" font-weight="700" letter-spacing="-0.04em" text-anchor="middle">CATALYST SCOUT</text>
+  <text x="400" y="140" fill="#00d992" font-family="Geist Mono, monospace" font-size="14" font-weight="500" letter-spacing="0.2em" text-anchor="middle">AI-POWERED TALENT SCOUTING AGENT</text>
+  <circle cx="400" cy="170" r="4" fill="#00d992" fill-opacity="0.5">
+    <animate attributeName="r" values="4;6;4" dur="2s" repeatCount="indefinite" />
+    <animate attributeName="fill-opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite" />
+  </circle>
+</svg>
