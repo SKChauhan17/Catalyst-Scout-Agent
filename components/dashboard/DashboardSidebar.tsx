@@ -1,12 +1,12 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Sparkles, RotateCcw } from 'lucide-react';
 import { useScoutStore } from '@/lib/store/useScoutStore';
 import AgentTerminal from '@/components/AgentTerminal';
 import BYODController from '@/components/dashboard/BYODController';
-import { streamScout } from '@/lib/scout/streamScout';
+import { ScoutRequestError, streamScout } from '@/lib/scout/streamScout';
 
 const MAC_LAYOUT_SPRING = {
   type: 'spring',
@@ -14,6 +14,8 @@ const MAC_LAYOUT_SPRING = {
   damping: 30,
   mass: 0.95,
 } as const;
+
+const SCOUT_LAUNCH_LOCK_MS = 2500;
 
 // ── AI Enhancer: typing-effect JD expansion ───────────────────
 const ENHANCED_TEMPLATE = (input: string) => `We are looking for a ${input}.
@@ -37,35 +39,53 @@ async function runEnhancer(
 
 // ─────────────────────────────────────────────────────────────
 export default function DashboardSidebar() {
-  const { rawJD, setJD, logs, customCandidates, isScouting, startScout, abortScout, finishScout, addLog, addResult, clearSession } =
+  const {
+    rawJD,
+    setJD,
+    logs,
+    customCandidates,
+    isScouting,
+    isScoutLaunchLocked,
+    tryLockScoutLaunch,
+    releaseScoutLaunchLock,
+    startScout,
+    attachScoutJob,
+    resolveScoutLaunchFailure,
+    abortScout,
+    clearSession,
+  } =
     useScoutStore();
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [terminalCollapsed, setTerminalCollapsed] = useState(true);
-  const abortRef = useRef<AbortController | null>(null);
 
   // ── Scout handler ──────────────────────────────────────────
   async function handleScout() {
-    if (!rawJD.trim() || isScouting) return;
+    if (!rawJD.trim() || isScouting || !tryLockScoutLaunch()) return;
     setTerminalCollapsed(false);
-
-    const controller = startScout();
-    abortRef.current = controller;
+    const requestStartedAt = Date.now();
 
     try {
-      await streamScout({
+      startScout();
+
+      const { jobId } = await streamScout({
         rawJD,
         customCandidates,
-        signal: controller.signal,
-        onLog: addLog,
-        onCandidate: addResult,
-        onDone: finishScout,
       });
+      attachScoutJob(jobId);
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== 'AbortError') {
-        addLog(`❌ ${err.message}`);
+        const status = err instanceof ScoutRequestError ? err.status : undefined;
+        resolveScoutLaunchFailure(`❌ ${err.message}`, status);
       }
     } finally {
-      finishScout();
+      const remainingLockMs = Math.max(
+        0,
+        SCOUT_LAUNCH_LOCK_MS - (Date.now() - requestStartedAt)
+      );
+
+      window.setTimeout(() => {
+        releaseScoutLaunchLock();
+      }, remainingLockMs);
     }
   }
 
@@ -149,7 +169,7 @@ export default function DashboardSidebar() {
         <button
           id="desktop-scout-button"
           onClick={isScouting ? abortScout : handleScout}
-          disabled={!rawJD.trim() && !isScouting}
+          disabled={isScoutLaunchLocked || (!rawJD.trim() && !isScouting)}
           className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-full text-[13px] font-[500] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 active:scale-[0.98]"
           style={{
             backgroundColor: '#0f0f0f',
@@ -164,7 +184,7 @@ export default function DashboardSidebar() {
                 className="w-3.5 h-3.5 rounded-full border-2 animate-spin"
                 style={{ borderColor: '#f87171', borderTopColor: 'transparent' }}
               />
-              Abort Scout
+              Stop Listening
             </>
           ) : (
             <>

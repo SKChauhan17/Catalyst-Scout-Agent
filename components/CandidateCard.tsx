@@ -2,18 +2,9 @@
 
 import { useState } from 'react';
 import { X, Sparkles, MapPin, DollarSign, ChevronRight } from 'lucide-react';
+import type { EvaluatedCandidate } from '@/lib/agent/state';
 
-export interface EvaluatedCandidate {
-  id: string;
-  name: string;
-  skills: string[];
-  location: string;
-  salary_expectation: string;
-  match_score: number;      // 0–1 (cosine similarity)
-  interest_score: number;   // 0–100
-  final_score: number;      // computed
-  chat_transcript: Array<{ role: 'recruiter' | 'candidate'; content: string }>;
-}
+export type { EvaluatedCandidate } from '@/lib/agent/state';
 
 interface CandidateCardProps {
   candidate: EvaluatedCandidate;

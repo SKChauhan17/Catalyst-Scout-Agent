@@ -1,13 +1,13 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Sparkles, RotateCcw, ChevronDown, Terminal, Users } from 'lucide-react';
 import { useScoutStore } from '@/lib/store/useScoutStore';
 import AgentTerminal from '@/components/AgentTerminal';
 import CandidateCard from '@/components/CandidateCard';
 import BYODController from '@/components/dashboard/BYODController';
-import { streamScout } from '@/lib/scout/streamScout';
+import { ScoutRequestError, streamScout } from '@/lib/scout/streamScout';
 
 const MAC_LAYOUT_SPRING = {
   type: 'spring',
@@ -31,6 +31,8 @@ const MOBILE_COLLAPSE_TRANSITION = {
   filter: { duration: 0.08, ease: MAC_EASE },
   scaleY: { duration: 0.12, ease: MAC_EASE },
 } as const;
+
+const SCOUT_LAUNCH_LOCK_MS = 2500;
 
 // ── AI Enhancer (same logic as DashboardSidebar) ──────────────
 const ENHANCED_TEMPLATE = (input: string) =>
@@ -118,39 +120,43 @@ function AccordionTab({
 // ── Main mobile layout component ──────────────────────────────
 export default function MobileView() {
   const {
-    rawJD, setJD, logs, results, customCandidates, isScouting,
-    startScout, abortScout, finishScout, addLog, addResult, clearSession,
+    rawJD, setJD, logs, results, customCandidates, isScouting, isScoutLaunchLocked,
+    tryLockScoutLaunch, releaseScoutLaunchLock, startScout, attachScoutJob,
+    resolveScoutLaunchFailure, abortScout, clearSession,
   } = useScoutStore();
 
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [candidatesOpen, setCandidatesOpen] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
 
   // Auto-expand terminal when scouting starts
   const handleScout = async () => {
-    if (!rawJD.trim() || isScouting) return;
+    if (!rawJD.trim() || isScouting || !tryLockScoutLaunch()) return;
     setTerminalOpen(true);  // Auto-open log tab on launch
-
-    const controller = startScout();
-    abortRef.current = controller;
+    const requestStartedAt = Date.now();
 
     try {
-      await streamScout({
+      startScout();
+
+      const { jobId } = await streamScout({
         rawJD,
         customCandidates,
-        signal: controller.signal,
-        onLog: addLog,
-        onCandidate: (candidate) => {
-          addResult(candidate);
-          setCandidatesOpen(true);
-        },
-        onDone: finishScout,
       });
+      attachScoutJob(jobId);
     } catch (err: unknown) {
-      if (err instanceof Error && err.name !== 'AbortError') addLog(`❌ ${err.message}`);
+      if (err instanceof Error && err.name !== 'AbortError') {
+        const status = err instanceof ScoutRequestError ? err.status : undefined;
+        resolveScoutLaunchFailure(`❌ ${err.message}`, status);
+      }
     } finally {
-      finishScout();
+      const remainingLockMs = Math.max(
+        0,
+        SCOUT_LAUNCH_LOCK_MS - (Date.now() - requestStartedAt)
+      );
+
+      window.setTimeout(() => {
+        releaseScoutLaunchLock();
+      }, remainingLockMs);
     }
   };
 
@@ -223,7 +229,7 @@ export default function MobileView() {
         <button
           id="mobile-scout-button"
           onClick={isScouting ? abortScout : handleScout}
-          disabled={!rawJD.trim() && !isScouting}
+          disabled={isScoutLaunchLocked || (!rawJD.trim() && !isScouting)}
           className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-full text-[13px] font-[500] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 active:scale-[0.98]"
           style={{
             backgroundColor: '#0f0f0f',
@@ -238,7 +244,7 @@ export default function MobileView() {
                 className="w-3.5 h-3.5 rounded-full border-2 animate-spin"
                 style={{ borderColor: '#f87171', borderTopColor: 'transparent' }}
               />
-              Abort Scout
+              Stop Listening
             </>
           ) : (
             <>
@@ -274,37 +280,30 @@ export default function MobileView() {
           open={terminalOpen}
           onToggle={() => setTerminalOpen((o) => !o)}
         />
-        <AnimatePresence initial={false}>
-          {terminalOpen && (
-            <motion.div
-              layout
-              key="terminal-body"
-              initial={{ height: 0, opacity: 0, filter: 'blur(10px)', scaleY: 0.98 }}
-              animate={{ height: 288, opacity: 1, filter: 'blur(0px)', scaleY: 1 }}
-              exit={{
-                height: 0,
-                opacity: 0,
-                filter: 'blur(4px)',
-                scaleY: 0.995,
-                transition: MOBILE_COLLAPSE_TRANSITION,
-              }}
-              transition={MAC_REVEAL_TRANSITION}
-              style={{
-                overflow: 'hidden',
-                transformOrigin: 'top',
-                backgroundColor: '#101010',
-                borderBottom: '1px solid rgba(255,255,255,0.06)',
-              }}
-            >
-              <div className="h-72">
-                <AgentTerminal
-                  logs={logs.map((l) => l.message)}
-                  status={terminalStatus}
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <motion.div
+          layout
+          key="terminal-body"
+          initial={false}
+          animate={
+            terminalOpen
+              ? { height: 288, opacity: 1, filter: 'blur(0px)', scaleY: 1 }
+              : { height: 0, opacity: 0, filter: 'blur(4px)', scaleY: 0.995 }
+          }
+          transition={terminalOpen ? MAC_REVEAL_TRANSITION : MOBILE_COLLAPSE_TRANSITION}
+          style={{
+            overflow: 'hidden',
+            transformOrigin: 'top',
+            backgroundColor: '#101010',
+            borderBottom: terminalOpen ? '1px solid rgba(255,255,255,0.06)' : '1px solid transparent',
+          }}
+        >
+          <div className="h-72">
+            <AgentTerminal
+              logs={logs.map((l) => l.message)}
+              status={terminalStatus}
+            />
+          </div>
+        </motion.div>
       </motion.section>
 
       {/* ── Section 3: Evaluated Candidates (collapsible) ── */}
