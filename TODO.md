@@ -71,7 +71,7 @@
 - [x] **5.3 Deployment Readiness**
   - [x] Solve all ESLint warnings and unused constants.
   - [x] Ensure `pnpm build` passes with zero type errors.
-  - [x] Bump version to `v0.6.0` and sync UI display.
+  - [x] Bump version to `v1.0.0` and sync UI display.
 - [x] **Phase 5 Git Checkpoint**
 
 ---
@@ -81,5 +81,6 @@
 **Goal:** Lock in the win.
 
 - [ ] **6.1 Vercel Deployment**
-- [ ] **6.2 Repository Polish (README.md)**
-- [ ] **6.3 Final Review & Collaborator Invite**
+- [x] **6.2 Repository Polish (README.md & Module Docs)**
+- [x] **6.3 Database Maintenance (Log Cleanup Cron)**
+- [ ] **6.4 Final Review & Collaborator Invite**

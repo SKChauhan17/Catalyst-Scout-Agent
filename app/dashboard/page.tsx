@@ -36,7 +36,7 @@ export default function DashboardPage() {
               color: '#00d992',
             }}
           >
-            v0.6.0
+            v1.0.0
           </span>
         </div>
 

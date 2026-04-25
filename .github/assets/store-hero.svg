@@ -1,0 +1,23 @@
+<svg width="800" height="240" viewBox="0 0 800 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="240" fill="#141413"/>
+  <rect x="20" y="20" width="760" height="200" rx="20" fill="#E8E6DC"/>
+  
+  <text x="50" y="60" fill="#141413" font-family="Inter, sans-serif" font-size="20" font-weight="800" letter-spacing="-0.04em">CATALYST SCOUT</text>
+  <rect x="50" y="70" width="130" height="24" rx="12" fill="#E76F51"/>
+  <text x="115" y="86" fill="white" font-family="Geist Mono, monospace" font-size="10" font-weight="600" letter-spacing="0.1em" text-anchor="middle">ZUSTAND STATE</text>
+  
+  <!-- State Cube Visualization -->
+  <g transform="translate(450, 100)">
+    <!-- Converging streams -->
+    <path d="M-150 -40L-20 -10" stroke="#3D5A80" stroke-width="2" stroke-dasharray="2 2"/>
+    <path d="M-150 40L-20 10" stroke="#00D992" stroke-width="2" stroke-dasharray="2 2"/>
+    <path d="M-150 0L-20 0" stroke="#D27D5F" stroke-width="2" stroke-dasharray="2 2"/>
+    
+    <!-- Central Cube (Isometric-style) -->
+    <path d="M0 0L30 -15L60 0L30 15Z" fill="#141413"/>
+    <path d="M0 0L0 40L30 55L30 15Z" fill="#262626"/>
+    <path d="M30 15L30 55L60 40L60 0Z" fill="#333333"/>
+    
+    <text x="30" y="80" fill="#141413" font-family="Geist Mono, monospace" font-size="9" font-weight="800" text-anchor="middle">ZUSTAND_STORE</text>
+  </g>
+</svg>

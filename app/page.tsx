@@ -226,7 +226,7 @@ export default function LandingPage() {
           className="text-[12px]"
           style={{ fontFamily: 'var(--font-geist-mono)', color: 'rgba(255,255,255,0.2)' }}
         >
-          v0.6.0
+          v1.0.0
         </span>
       </footer>
     </div>

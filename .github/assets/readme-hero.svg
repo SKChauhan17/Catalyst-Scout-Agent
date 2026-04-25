@@ -1,0 +1,14 @@
+<svg width="800" height="240" viewBox="0 0 800 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="240" fill="#141413"/>
+  <rect x="20" y="20" width="760" height="200" rx="20" fill="#E8E6DC"/>
+  
+  <text x="400" y="100" fill="#141413" font-family="Inter, sans-serif" font-size="48" font-weight="900" letter-spacing="-0.06em" text-anchor="middle">CATALYST SCOUT</text>
+  <text x="400" y="140" fill="#141413" font-family="Geist Mono, monospace" font-size="14" font-weight="600" letter-spacing="0.2em" text-anchor="middle">AI-POWERED TALENT SCOUTING AGENT</text>
+  
+  <!-- Subtle UI Elements -->
+  <rect x="340" y="160" width="120" height="30" rx="15" fill="#141413"/>
+  <text x="400" y="180" fill="#00D992" font-family="Geist Mono, monospace" font-size="10" font-weight="700" text-anchor="middle">MISSION: ACTIVE</text>
+  
+  <circle cx="100" cy="120" r="40" stroke="#141413" stroke-opacity="0.05" stroke-width="2"/>
+  <circle cx="700" cy="120" r="40" stroke="#141413" stroke-opacity="0.05" stroke-width="2"/>
+</svg>
