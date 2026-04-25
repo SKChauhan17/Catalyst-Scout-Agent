@@ -55,11 +55,28 @@ export interface CandidateEvaluation {
   chat_transcript: ChatTurn[];
 }
 
+export interface EvaluatedCandidate {
+  id: string;
+  name: string;
+  skills: string[];
+  location: string;
+  salary_expectation: string;
+  match_score: number;
+  interest_score: number;
+  final_score: number;
+  chat_transcript: ChatTurn[];
+}
+
 // ============================================================
 // Master LangGraph Agent State — the single source of truth
 // for the entire agentic workflow.
 // ============================================================
 export const AgentStateAnnotation = Annotation.Root({
+  jobId: Annotation<string>({
+    reducer: (_, next) => next,
+    default: () => '',
+  }),
+
   // Raw job description text submitted by the user
   rawJD: Annotation<string>({
     reducer: (_, next) => next,

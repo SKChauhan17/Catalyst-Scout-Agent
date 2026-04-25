@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { pipeline } from '@xenova/transformers';
+import { broadcastAgentLog } from '@/lib/agent/realtime';
 import { invokeLLM } from '@/lib/llm/router';
 import type { AgentState, Candidate, CustomCandidate, ParsedJD } from '../state';
 
@@ -171,11 +172,10 @@ async function retrieveSupabaseMatches(parsedJD: ParsedJD): Promise<Candidate[]>
   ].join('. ');
 
   // Generate 384-dimensional vector locally via Supabase/gte-small
+  const extractor = await getEmbeddingPipeline();
+  const output = await extractor(queryText, { pooling: 'mean', normalize: true });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const extractor = await getEmbeddingPipeline() as any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const output: any = await extractor(queryText, { pooling: 'mean', normalize: true });
-  const queryEmbedding = Array.from(output.data) as number[];
+  const queryEmbedding = Array.from((output as any).data) as number[];
 
   const { data, error } = await supabase.rpc('match_candidates', {
     query_embedding: queryEmbedding,
@@ -210,5 +210,15 @@ export async function retrieveMatchNode(state: AgentState): Promise<Partial<Agen
   }
 
   console.log(`[Node: retrieveMatch] ✓ Retrieved ${retrievedCandidates.length} candidates.`);
+
+  if (state.jobId) {
+    await broadcastAgentLog(
+      state.jobId,
+      state.customCandidates.length > 0
+        ? `✓ [retrieveMatch] ${retrievedCandidates.length} candidates selected from the BYOD dataset`
+        : `✓ [retrieveMatch] ${retrievedCandidates.length} candidates retrieved via hybrid search`
+    );
+  }
+
   return { retrievedCandidates, currentCandidateIndex: 0 };
 }
