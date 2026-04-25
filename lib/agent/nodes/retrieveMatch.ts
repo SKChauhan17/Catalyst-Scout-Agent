@@ -173,7 +173,8 @@ async function retrieveSupabaseMatches(parsedJD: ParsedJD): Promise<Candidate[]>
 
   // Generate 384-dimensional vector locally via Supabase/gte-small
   const extractor = await getEmbeddingPipeline();
-  const output = await extractor(queryText, { pooling: 'mean', normalize: true });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const output = await extractor(queryText, { pooling: 'mean', normalize: true } as any);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const queryEmbedding = Array.from((output as any).data) as number[];
 
