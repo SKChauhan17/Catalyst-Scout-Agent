@@ -11,6 +11,58 @@ export interface LLMRequest {
   temperature?: number;
 }
 
+const REQUEST_TIMEOUT_MS = 30_000;
+const GEMINI_MODEL_TIMEOUT_MS = 7_000;
+
+const RETRYABLE_CODES = ['429', '500', '502', '503', '504', 'ECONNRESET', 'ETIMEDOUT', 'timeout'];
+const RETRYABLE_PHRASES = ['rate limit', 'temporarily unavailable', 'overloaded', 'network'];
+const GEMINI_MODEL_FALLBACK_PATTERNS = [
+  '404',
+  'not found',
+  'not supported',
+  'unsupported',
+  'unavailable',
+] as const;
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(String(err));
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(`[timeout:${label}] Request timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    promise.then(
+      (value) => {
+        clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      }
+    );
+  });
+}
+
+function isRetryable(err: unknown): boolean {
+  const msg = errorMessage(err).toLowerCase();
+  return RETRYABLE_CODES.some((code) => msg.includes(code.toLowerCase()))
+    || RETRYABLE_PHRASES.some((phrase) => msg.includes(phrase));
+}
+
+function isGeminiRetryable(err: unknown): boolean {
+  const msg = errorMessage(err).toLowerCase();
+  return isRetryable(err)
+    || GEMINI_MODEL_FALLBACK_PATTERNS.some((pattern) => msg.includes(pattern));
+}
+
 // ============================================================
 // Provider clients
 // ============================================================
@@ -38,17 +90,15 @@ const cerebras = new OpenAI({
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '');
 
 // ============================================================
-// Tier 5 — Gemini vertical fallback
-// Top 5 text-reasoning models from a live GET /v1beta/models
-// call (run 2026-04-25), ordered by capability descending.
-// Excludes: TTS, image, robotics, research, and Gemma variants.
+// Tier 5 - Gemini vertical fallback
+// Ordered by capability descending.
 // ============================================================
 const GEMINI_MODELS = [
-  'gemini-3.1-pro-preview',  // Newest — highest reasoning capability
-  'gemini-3-pro-preview',    // Previous gen Pro
-  'gemini-2.5-pro',          // Latest stable Pro
-  'gemini-2.5-flash',        // Fast + highly capable
-  'gemini-2.0-flash',        // Proven stable fallback
+  'gemini-3.1-pro-preview',
+  'gemini-3-pro-preview',
+  'gemini-2.5-pro',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
 ] as const;
 
 async function invokeGeminiCascade(req: LLMRequest): Promise<string> {
@@ -61,39 +111,49 @@ async function invokeGeminiCascade(req: LLMRequest): Promise<string> {
         generationConfig: { temperature: req.temperature ?? 0.1 },
         systemInstruction: req.systemPrompt,
       });
-      const result = await model.generateContent(req.userPrompt);
+      const result = await withTimeout(
+        model.generateContent(req.userPrompt),
+        GEMINI_MODEL_TIMEOUT_MS,
+        `Gemini/${modelName}`
+      );
       const text = result.response.text();
+
       if (text?.trim()) {
-        console.log(`[LLM Router] ✓ Gemini: ${modelName}`);
+        console.log(`[LLM Router] SUCCESS Gemini/${modelName}`);
         return text;
       }
+
+      lastError = new Error(`Gemini/${modelName} returned an empty response.`);
+      console.warn(`[LLM Router] Gemini/${modelName} returned an empty response, trying next...`);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes('429') || msg.includes('500') || msg.includes('503')) {
-        console.warn(`[LLM Router] Gemini/${modelName} → ${msg.slice(0, 60)}, trying next...`);
-        lastError = err instanceof Error ? err : new Error(msg);
+      const msg = errorMessage(err);
+      if (isGeminiRetryable(err)) {
+        console.warn(`[LLM Router] Gemini/${modelName} -> ${msg.slice(0, 80)}, trying next...`);
+        lastError = toError(err);
         continue;
       }
-      throw err; // Non-retryable
+      throw err;
     }
   }
 
-  throw new Error(`[LLM Router] All Gemini models exhausted. Last: ${lastError?.message}`);
+  throw new Error(`[LLM Router] All Gemini models exhausted. Last: ${lastError?.message ?? 'No response returned.'}`);
 }
 
 // ============================================================
-// Tier definitions — horizontal provider waterfall
+// Tier definitions - horizontal provider waterfall
 // ============================================================
 type TierName = 'SambaNova' | 'OpenRouter' | 'Groq' | 'Cerebras' | 'Gemini';
 
 interface Tier {
   name: TierName;
+  enabled: boolean;
   invoke: (req: LLMRequest) => Promise<string>;
 }
 
 const TIERS: Tier[] = [
   {
     name: 'SambaNova',
+    enabled: Boolean(process.env.SAMBANOVA_API_KEY),
     invoke: async ({ systemPrompt, userPrompt, temperature = 0.1 }) => {
       const res = await sambanova.chat.completions.create({
         model: 'Meta-Llama-3.3-70B-Instruct',
@@ -108,6 +168,7 @@ const TIERS: Tier[] = [
   },
   {
     name: 'OpenRouter',
+    enabled: Boolean(process.env.OPENROUTER_API_KEY),
     invoke: async ({ systemPrompt, userPrompt, temperature = 0.1 }) => {
       const res = await openrouter.chat.completions.create({
         model: 'meta-llama/llama-3.3-70b-instruct:free',
@@ -122,6 +183,7 @@ const TIERS: Tier[] = [
   },
   {
     name: 'Groq',
+    enabled: Boolean(process.env.GROQ_API_KEY),
     invoke: async ({ systemPrompt, userPrompt, temperature = 0.1 }) => {
       const res = await groq.chat.completions.create({
         model: 'llama-3.3-70b-versatile',
@@ -136,6 +198,7 @@ const TIERS: Tier[] = [
   },
   {
     name: 'Cerebras',
+    enabled: Boolean(process.env.CEREBRAS_API_KEY),
     invoke: async ({ systemPrompt, userPrompt, temperature = 0.1 }) => {
       const res = await cerebras.chat.completions.create({
         model: 'llama3.1-70b',
@@ -149,65 +212,63 @@ const TIERS: Tier[] = [
     },
   },
   {
-    // Tier 5: Gemini vertical cascade (2.5-pro → 2.0-flash → 1.5-pro → 1.5-flash → 1.0-pro)
     name: 'Gemini',
+    enabled: Boolean(process.env.GEMINI_API_KEY),
     invoke: invokeGeminiCascade,
   },
 ];
 
-// ============================================================
-// Master horizontal waterfall
-// ============================================================
-const RETRYABLE_CODES = ['429', '500', '502', '503', 'ECONNRESET', 'timeout'];
-
-function isRetryable(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return RETRYABLE_CODES.some((code) => msg.includes(code));
-}
-
 /**
- * Master horizontal waterfall across all 5 provider tiers.
- * - The exact original `req` object is forwarded unchanged to every tier.
- * - On 429 / 5xx / network error, emits a [FALLBACK] log and shifts to the next tier.
- * - Non-retryable errors propagate immediately.
- * - Tier 5 (Gemini) internally cascades through 5 sub-models.
+ * Master horizontal waterfall across all configured provider tiers.
+ * - The same request object is forwarded unchanged to each tier.
+ * - Retryable failures and enforced timeouts fall through to the next tier.
+ * - Gemini internally performs its own model-level cascade.
  */
 export async function invokeLLM(req: LLMRequest): Promise<string> {
   let lastError: Error | null = null;
 
   for (let i = 0; i < TIERS.length; i++) {
     const tier = TIERS[i];
-    const timeoutController = new AbortController();
-    const timeoutId = setTimeout(() => timeoutController.abort(), 30000); // 30s timeout
+
+    if (!tier.enabled) {
+      console.warn(`[LLM Router] Skipping Tier ${i + 1} (${tier.name}) because its API key is not configured.`);
+      continue;
+    }
 
     try {
-      const result = await tier.invoke(req);
-      clearTimeout(timeoutId);
-      if (result && result.trim().length > 0) {
-        console.log(`[LLM Router] ✅ SUCCESS: Tier ${i + 1} (${tier.name}) fulfilled the request.`);
+      const result = await withTimeout(
+        tier.invoke(req),
+        REQUEST_TIMEOUT_MS,
+        `Tier ${i + 1} (${tier.name})`
+      );
+
+      if (result.trim().length > 0) {
+        console.log(`[LLM Router] SUCCESS Tier ${i + 1} (${tier.name}) fulfilled the request.`);
         return result;
       }
-      console.warn(`[LLM Router] ⚠️ Tier ${i + 1} (${tier.name}) returned an empty response. Trying next...`);
-    } catch (err: unknown) {
-      clearTimeout(timeoutId);
-      const isTimeout = err instanceof Error && err.name === 'AbortError';
-      if (isRetryable(err) || isTimeout) {
-        const msg = isTimeout ? 'Request timed out after 30s' : (err instanceof Error ? err.message : String(err));
-        const nextTier = TIERS[i + 1];
-        lastError = isTimeout ? new Error(msg) : (err instanceof Error ? err : new Error(msg));
 
-        if (nextTier) {
+      lastError = new Error(`Tier ${i + 1} (${tier.name}) returned an empty response.`);
+      console.warn(`[LLM Router] Tier ${i + 1} (${tier.name}) returned an empty response. Trying next...`);
+    } catch (err: unknown) {
+      const msg = errorMessage(err);
+      const isTimeout = msg.includes('[timeout:');
+
+      if (isRetryable(err) || isTimeout) {
+        lastError = toError(err);
+
+        if (i + 1 < TIERS.length) {
           console.warn(
-            `[LLM Router] [FALLBACK] Tier ${i + 1} (${tier.name}) ${isTimeout ? 'timed out' : 'failed'} → ${msg.slice(0, 80)}. Shifting to Tier ${i + 2}: ${nextTier.name}...`
+            `[LLM Router] [FALLBACK] Tier ${i + 1} (${tier.name}) ${isTimeout ? 'timed out' : 'failed'} -> ${msg.slice(0, 80)}. Shifting to Tier ${i + 2}: ${TIERS[i + 1].name}...`
           );
         }
         continue;
       }
+
       throw err;
     }
   }
 
   throw new Error(
-    `[LLM Router] All ${TIERS.length} tiers exhausted. Last error: ${lastError?.message}`
+    `[LLM Router] All configured tiers exhausted. Last error: ${lastError?.message ?? 'No provider returned content.'}`
   );
 }
