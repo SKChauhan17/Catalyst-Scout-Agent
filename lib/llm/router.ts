@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import Groq from 'groq-sdk';
-import { invokeGemini } from './geminiRouter';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // ============================================================
 // Shared request shape
@@ -35,8 +35,55 @@ const cerebras = new OpenAI({
   apiKey: process.env.CEREBRAS_API_KEY ?? '',
 });
 
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY ?? '');
+
 // ============================================================
-// Tier definitions
+// Tier 5 — Gemini vertical fallback
+// Top 5 models from the Gemini API listed once, ordered by
+// capability descending: 2.5-pro → 2.0-flash → 1.5-pro →
+// 1.5-flash → 1.0-pro
+// Source: https://ai.google.dev/gemini-api/docs/models
+// ============================================================
+const GEMINI_MODELS = [
+  'gemini-2.5-pro-preview-03-25', // Most capable — extended thinking
+  'gemini-2.0-flash',             // Fast + capable, latest stable
+  'gemini-1.5-pro',               // Long context, high intelligence
+  'gemini-1.5-flash',             // Balanced speed/quality
+  'gemini-1.0-pro',               // Legacy fallback
+] as const;
+
+async function invokeGeminiCascade(req: LLMRequest): Promise<string> {
+  let lastError: Error | null = null;
+
+  for (const modelName of GEMINI_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: { temperature: req.temperature ?? 0.1 },
+        systemInstruction: req.systemPrompt,
+      });
+      const result = await model.generateContent(req.userPrompt);
+      const text = result.response.text();
+      if (text?.trim()) {
+        console.log(`[LLM Router] ✓ Gemini: ${modelName}`);
+        return text;
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('429') || msg.includes('500') || msg.includes('503')) {
+        console.warn(`[LLM Router] Gemini/${modelName} → ${msg.slice(0, 60)}, trying next...`);
+        lastError = err instanceof Error ? err : new Error(msg);
+        continue;
+      }
+      throw err; // Non-retryable
+    }
+  }
+
+  throw new Error(`[LLM Router] All Gemini models exhausted. Last: ${lastError?.message}`);
+}
+
+// ============================================================
+// Tier definitions — horizontal provider waterfall
 // ============================================================
 type TierName = 'SambaNova' | 'OpenRouter' | 'Groq' | 'Cerebras' | 'Gemini';
 
@@ -103,9 +150,9 @@ const TIERS: Tier[] = [
     },
   },
   {
+    // Tier 5: Gemini vertical cascade (2.5-pro → 2.0-flash → 1.5-pro → 1.5-flash → 1.0-pro)
     name: 'Gemini',
-    invoke: async ({ systemPrompt, userPrompt, temperature = 0.1 }) =>
-      invokeGemini({ systemPrompt, userPrompt, temperature }),
+    invoke: invokeGeminiCascade,
   },
 ];
 
@@ -120,9 +167,9 @@ function isRetryable(err: unknown): boolean {
 }
 
 /**
- * Cascades through all 5 LLM tiers in order.
- * Falls back on 429 / 5xx / network errors only.
- * Propagates non-retryable errors immediately.
+ * Cascades through all 5 LLM provider tiers in order.
+ * Tier 5 (Gemini) itself cascades through 5 sub-models internally.
+ * Falls back only on 429 / 5xx / network errors.
  */
 export async function invokeLLM(req: LLMRequest): Promise<string> {
   let lastError: Error | null = null;
@@ -132,25 +179,20 @@ export async function invokeLLM(req: LLMRequest): Promise<string> {
       const result = await tier.invoke(req);
       if (result?.trim()) {
         if (tier.name !== 'SambaNova') {
-          console.log(`[LLM Router] ✓ Served by Tier: ${tier.name}`);
+          console.log(`[LLM Router] ✓ Served by: ${tier.name}`);
         }
         return result;
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
       if (isRetryable(err)) {
-        console.warn(
-          `[LLM Router] ${tier.name} failed (${msg.slice(0, 80)}). Cascading to next tier...`
-        );
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[LLM Router] ${tier.name} failed → ${msg.slice(0, 80)}. Cascading...`);
         lastError = err instanceof Error ? err : new Error(msg);
         continue;
       }
-      // Non-retryable — re-throw immediately
       throw err;
     }
   }
 
-  throw new Error(
-    `[LLM Router] All 5 tiers exhausted. Last error: ${lastError?.message}`
-  );
+  throw new Error(`[LLM Router] All 5 tiers exhausted. Last: ${lastError?.message}`);
 }
