@@ -1,10 +1,22 @@
-<svg width="800" height="200" viewBox="0 0 800 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="800" height="200" fill="#050507"/>
-  <rect x="0.5" y="0.5" width="799" height="199" stroke="white" stroke-opacity="0.05"/>
-  <path d="M100 100H700" stroke="#00d992" stroke-opacity="0.2" stroke-width="1"/>
-  <circle cx="200" cy="100" r="4" fill="#00d992"/>
-  <circle cx="400" cy="100" r="4" fill="#00d992"/>
-  <circle cx="600" cy="100" r="4" fill="#00d992"/>
-  <text x="400" y="70" fill="#f7f8f8" font-family="Inter, sans-serif" font-size="32" font-weight="700" letter-spacing="-0.04em" text-anchor="middle">LLM WATERFALL</text>
-  <text x="400" y="140" fill="#00d992" font-family="Geist Mono, monospace" font-size="12" font-weight="500" letter-spacing="0.1em" text-anchor="middle">9-TIER TIME-SLICED ROUTER</text>
+<svg width="800" height="240" viewBox="0 0 800 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="240" fill="#F9F6F1"/>
+  <rect x="20" y="20" width="760" height="200" rx="24" fill="white" stroke="#E5E0D8" stroke-width="1"/>
+  
+  <rect x="50" y="50" width="120" height="24" rx="12" fill="#3D5A80"/>
+  <text x="110" y="66" fill="white" font-family="Geist Mono, monospace" font-size="10" font-weight="600" letter-spacing="0.1em" text-anchor="middle">REASONING ENGINE</text>
+  
+  <text x="50" y="115" fill="#141413" font-family="Georgia, serif" font-size="42" font-weight="700" letter-spacing="-0.02em">9-Tier Waterfall</text>
+  <text x="50" y="145" fill="#525252" font-family="Inter, sans-serif" font-size="16" font-weight="400">Time-sliced LLM routing for 100% availability. Never timeout. Never fail.</text>
+  
+  <line x1="50" y1="165" x2="300" y2="165" stroke="#E5E0D8" stroke-width="1"/>
+  
+  <rect x="50" y="180" width="130" height="28" rx="6" fill="#141413"/>
+  <text x="115" y="198" fill="white" font-family="Inter, sans-serif" font-size="11" font-weight="600" text-anchor="middle">Groq + SambaNova</text>
+  
+  <rect x="190" y="180" width="100" height="28" rx="14" fill="#F0EFEA"/>
+  <text x="240" y="198" fill="#525252" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">Claude 3.5</text>
+  
+  <!-- Icon -->
+  <rect x="680" y="80" width="60" height="60" rx="16" fill="white" stroke="#E5E0D8" stroke-width="1"/>
+  <path d="M700 110L710 110M710 110L720 95M710 110L720 125" stroke="#00D992" stroke-width="2" stroke-linecap="round"/>
 </svg>

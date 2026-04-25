@@ -1,0 +1,22 @@
+<svg width="800" height="240" viewBox="0 0 800 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="240" fill="#F9F6F1"/>
+  <rect x="20" y="20" width="760" height="200" rx="24" fill="white" stroke="#E5E0D8" stroke-width="1"/>
+  
+  <rect x="50" y="50" width="120" height="24" rx="12" fill="#3ECF8E"/>
+  <text x="110" y="66" fill="white" font-family="Geist Mono, monospace" font-size="10" font-weight="600" letter-spacing="0.1em" text-anchor="middle">PERSISTENCE</text>
+  
+  <text x="50" y="115" fill="#141413" font-family="Georgia, serif" font-size="42" font-weight="700" letter-spacing="-0.02em">Supabase Engine</text>
+  <text x="50" y="145" fill="#525252" font-family="Inter, sans-serif" font-size="16" font-weight="400">Real-time WebSocket logging. Vector embeddings. Automated maintenance.</text>
+  
+  <line x1="50" y1="165" x2="300" y2="165" stroke="#E5E0D8" stroke-width="1"/>
+  
+  <rect x="50" y="180" width="110" height="28" rx="6" fill="#141413"/>
+  <text x="105" y="198" fill="white" font-family="Inter, sans-serif" font-size="11" font-weight="600" text-anchor="middle">PostgreSQL + RLS</text>
+  
+  <rect x="170" y="180" width="100" height="28" rx="14" fill="#F0EFEA"/>
+  <text x="220" y="198" fill="#525252" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">pg_cron Daily</text>
+  
+  <!-- Icon -->
+  <rect x="680" y="80" width="60" height="60" rx="16" fill="white" stroke="#E5E0D8" stroke-width="1"/>
+  <path d="M700 120C700 110 710 100 720 100C730 100 740 110 740 120V130H700V120Z" fill="#3ECF8E" fill-opacity="0.2" stroke="#3ECF8E" stroke-width="2"/>
+</svg>

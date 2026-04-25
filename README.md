@@ -73,6 +73,7 @@ Detailed technical documentation for core subsystems:
 | :--- | :--- | :--- |
 | **Agent Logic** | LangGraph state machine, nodes, and scoring logic. | [lib/agent/README.md](lib/agent/README.md) |
 | **LLM Router** | 9-Tier "Immortal" time-sliced fallback waterfall. | [lib/llm/README.md](lib/llm/README.md) |
+| **Supabase Engine** | Real-time logging, RLS, and pg_cron maintenance. | [lib/supabase/README.md](lib/supabase/README.md) |
 | **Background Worker** | QStash handshake and execution security. | [app/api/README.md](app/api/README.md) |
 | **State Management** | Zustand stores, persistence, and WebSocket sync. | [lib/store/README.md](lib/store/README.md) |
 | **UI Components** | Dashboard, Terminal, and Design System. | [components/README.md](components/README.md) |
