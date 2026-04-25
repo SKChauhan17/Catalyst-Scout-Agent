@@ -1,26 +1,85 @@
 @import "tailwindcss";
 
+/* ================================================================
+   DESIGN.md — Catalyst Scout Design System Tokens
+   ================================================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces */
+  --abyss: #050507;
+  --panel-dark: #0f1011;
+  --carbon: #101010;
+
+  /* Text */
+  --text-primary: #f7f8f8;
+  --text-secondary: #8b949e;
+
+  /* Brand */
+  --emerald: #00d992;
+  --mint: #2fd6a1;
+  --supabase-green: #3ecf8e;
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-standard: rgba(255, 255, 255, 0.08);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+@theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Force dark-native — no media query toggle */
+html,
+body {
+  background-color: var(--abyss);
+  color: var(--text-primary);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100%;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Inset depth effect for code/JSON panels (DESIGN.md §5) */
+.inset-panel {
+  box-shadow: rgba(0, 0, 0, 0.2) 0px 0px 12px 0px inset;
+}
+
+/* Emerald Glow — applied to high-ranked candidate cards (DESIGN.md §4) */
+.emerald-glow {
+  filter: drop-shadow(0 0 6px #00d99240);
+}
+
+/* Thin custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* Pulsing emerald dot animation */
+@keyframes emerald-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.85); }
+}
+.pulse-emerald {
+  animation: emerald-pulse 1.4s ease-in-out infinite;
+}
+
+/* Terminal cursor blink */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.cursor-blink {
+  animation: blink 1s step-end infinite;
 }
