@@ -1,9 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import type { RealtimeChannel, RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import type { EvaluatedCandidate } from '@/lib/agent/state';
+import { getBrowserSupabaseClient } from '@/lib/supabase/browser';
 import { useScoutStore } from '@/lib/store/useScoutStore';
 
 export type AgentStatus = 'idle' | 'running' | 'done' | 'error';
@@ -15,6 +18,41 @@ interface AgentTerminalProps {
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
   headerId?: string;
+}
+
+interface EvaluationInsertRow {
+  candidate_snapshot: EvaluatedCandidate | null;
+  job_id: string | null;
+}
+
+function isEvaluatedCandidatePayload(value: unknown): value is EvaluatedCandidate {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.id === 'string'
+    && typeof record.name === 'string'
+    && typeof record.match_score === 'number'
+    && typeof record.interest_score === 'number'
+    && typeof record.final_score === 'number'
+    && Array.isArray(record.skills)
+    && Array.isArray(record.chat_transcript)
+  );
+}
+
+function removeChannelIfPresent(
+  supabase: ReturnType<typeof getBrowserSupabaseClient>,
+  topic: string
+) {
+  const existingChannels = supabase
+    .getChannels()
+    .filter((channel) => (channel as RealtimeChannel & { topic?: string }).topic === topic);
+
+  for (const channel of existingChannels) {
+    void supabase.removeChannel(channel);
+  }
 }
 
 const MAC_SPRING = {
@@ -96,6 +134,10 @@ export default function AgentTerminal({
     rawJD,
     logs: storeLogs,
     results,
+    currentJobId,
+    addLog,
+    addResult,
+    finishScout,
     toggleTerminalSize,
     isTerminalExpanded,
   } = useScoutStore();
@@ -107,6 +149,86 @@ export default function AgentTerminal({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
+
+  useEffect(() => {
+    if (!currentJobId) {
+      return;
+    }
+
+    const supabase = getBrowserSupabaseClient();
+    const logsTopic = `realtime:agent-logs:${currentJobId}`;
+    const evaluationsTopic = `realtime:evaluations:${currentJobId}`;
+
+    // 1. Initial log recovery (historical logs)
+    const fetchHistory = async () => {
+      const { data } = await supabase
+        .from('logs')
+        .select('message')
+        .eq('session_id', currentJobId)
+        .order('created_at', { ascending: true });
+
+      if (data && data.length > 0) {
+        // Clear existing local logs and replace with history to avoid duplicates
+        // In a real app, we'd be more careful with deduplication
+        (data as any[]).forEach((row) => addLog(row.message));
+      }
+    };
+
+    void fetchHistory();
+
+    removeChannelIfPresent(supabase, logsTopic);
+    removeChannelIfPresent(supabase, evaluationsTopic);
+
+    const logsChannel = supabase
+      .channel(`agent-logs:${currentJobId}`)
+      .on('broadcast', { event: 'log' }, ({ payload }) => {
+        const message = typeof payload?.message === 'string' ? payload.message : null;
+        if (message) {
+          addLog(message);
+        }
+      })
+      .on('broadcast', { event: 'result' }, ({ payload }) => {
+        if (isEvaluatedCandidatePayload(payload?.candidate)) {
+          addResult(payload.candidate);
+        }
+      })
+      .on('broadcast', { event: 'status' }, ({ payload }) => {
+        const state = typeof payload?.state === 'string' ? payload.state : '';
+        const message = typeof payload?.message === 'string' ? payload.message : undefined;
+
+        if (state === 'error' && message) {
+          addLog(`❌ ${message}`);
+        }
+
+        if (state === 'done' || state === 'error') {
+          finishScout(currentJobId);
+        }
+      })
+      .subscribe();
+
+    const evaluationsChannel = supabase
+      .channel(`evaluations:${currentJobId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'evaluations',
+          filter: `job_id=eq.${currentJobId}`,
+        },
+        (payload: RealtimePostgresInsertPayload<EvaluationInsertRow>) => {
+          if (payload.new.candidate_snapshot) {
+            addResult(payload.new.candidate_snapshot);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(logsChannel);
+      void supabase.removeChannel(evaluationsChannel);
+    };
+  }, [addLog, addResult, currentJobId, finishScout]);
 
   // 🔴 Export Session
   function handleRed() {
