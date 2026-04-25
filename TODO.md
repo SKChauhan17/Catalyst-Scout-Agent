@@ -81,5 +81,6 @@
 **Goal:** Lock in the win.
 
 - [ ] **6.1 Vercel Deployment**
-- [ ] **6.2 Repository Polish (README.md)**
-- [ ] **6.3 Final Review & Collaborator Invite**
+- [x] **6.2 Repository Polish (README.md & Module Docs)**
+- [x] **6.3 Database Maintenance (Log Cleanup Cron)**
+- [ ] **6.4 Final Review & Collaborator Invite**
