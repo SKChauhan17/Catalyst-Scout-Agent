@@ -166,32 +166,45 @@ function isRetryable(err: unknown): boolean {
 }
 
 /**
- * Cascades through all 5 LLM provider tiers in order.
- * Tier 5 (Gemini) itself cascades through 5 sub-models internally.
- * Falls back only on 429 / 5xx / network errors.
+ * Master horizontal waterfall across all 5 provider tiers.
+ * - The exact original `req` object is forwarded unchanged to every tier.
+ * - On 429 / 5xx / network error, emits a [FALLBACK] log and shifts to the next tier.
+ * - Non-retryable errors propagate immediately.
+ * - Tier 5 (Gemini) internally cascades through 5 sub-models.
  */
 export async function invokeLLM(req: LLMRequest): Promise<string> {
   let lastError: Error | null = null;
 
-  for (const tier of TIERS) {
+  for (let i = 0; i < TIERS.length; i++) {
+    const tier = TIERS[i];
     try {
       const result = await tier.invoke(req);
       if (result?.trim()) {
-        if (tier.name !== 'SambaNova') {
-          console.log(`[LLM Router] ✓ Served by: ${tier.name}`);
+        if (i > 0) {
+          // Only log when we've fallen back past Tier 1
+          console.log(`[LLM Router] ✓ Response served by Tier ${i + 1}: ${tier.name}`);
         }
         return result;
       }
     } catch (err: unknown) {
       if (isRetryable(err)) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`[LLM Router] ${tier.name} failed → ${msg.slice(0, 80)}. Cascading...`);
+        const nextTier = TIERS[i + 1];
         lastError = err instanceof Error ? err : new Error(msg);
+
+        if (nextTier) {
+          console.warn(
+            `[LLM Router] [FALLBACK] Tier ${i + 1} (${tier.name}) failed → ${msg.slice(0, 80)}. Shifting to Tier ${i + 2}: ${nextTier.name}...`
+          );
+        }
         continue;
       }
+      // Non-retryable (auth error, bad request, etc.) — re-throw immediately
       throw err;
     }
   }
 
-  throw new Error(`[LLM Router] All 5 tiers exhausted. Last: ${lastError?.message}`);
+  throw new Error(
+    `[LLM Router] All ${TIERS.length} tiers exhausted. Last error: ${lastError?.message}`
+  );
 }
