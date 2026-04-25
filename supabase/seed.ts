@@ -17,10 +17,49 @@ const CANDIDATE_COUNT = 100;
 const BATCH_SIZE = 5;
 const MAX_RETRIES = 3;
 
+interface SeedCandidate {
+  name: string;
+  skills: string[];
+  location: string;
+  salary_expectation: string;
+  system_prompt_persona: string;
+}
+
+function parseGeneratedCandidates(rawJson: string): SeedCandidate[] {
+  const parsed = JSON.parse(rawJson) as unknown;
+
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  return parsed.flatMap((candidate) => {
+    if (typeof candidate !== 'object' || candidate === null) {
+      return [];
+    }
+
+    const record = candidate as Record<string, unknown>;
+    const name = typeof record.name === 'string' ? record.name : '';
+    const skills = Array.isArray(record.skills)
+      ? record.skills.map((skill) => String(skill)).filter(Boolean)
+      : [];
+    const location = typeof record.location === 'string' ? record.location : '';
+    const salary_expectation =
+      typeof record.salary_expectation === 'string' ? record.salary_expectation : '';
+    const system_prompt_persona =
+      typeof record.system_prompt_persona === 'string' ? record.system_prompt_persona : '';
+
+    if (!name || skills.length === 0 || !location || !salary_expectation || !system_prompt_persona) {
+      return [];
+    }
+
+    return [{ name, skills, location, salary_expectation, system_prompt_persona }];
+  });
+}
+
 async function generateBatchWithRetry(
   prompt: string, 
   retries = 0
-): Promise<any[]> {
+): Promise<SeedCandidate[]> {
   try {
     const completion = await openai.chat.completions.create({
       model: 'Meta-Llama-3.3-70B-Instruct',
@@ -38,8 +77,8 @@ async function generateBatchWithRetry(
 
     const rawJson = completion.choices[0].message.content || '[]';
     const cleanJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
-    return JSON.parse(cleanJson);
-  } catch (error: any) {
+    return parseGeneratedCandidates(cleanJson);
+  } catch (error: unknown) {
     if (retries < MAX_RETRIES) {
       const waitTime = Math.pow(2, retries) * 1000;
       console.warn(`SambaNova API error. Retrying in ${waitTime}ms... (Attempt ${retries + 1}/${MAX_RETRIES})`);
@@ -47,7 +86,8 @@ async function generateBatchWithRetry(
       return generateBatchWithRetry(prompt, retries + 1);
     }
     
-    throw new Error(`Failed to generate batch after ${MAX_RETRIES} retries: ${error}`);
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to generate batch after ${MAX_RETRIES} retries: ${message}`);
   }
 }
 

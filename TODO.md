@@ -91,19 +91,26 @@
 
 ---
 
-## Phase 4: Hardening & Fallbacks
-**Branch:** `git checkout -b phase-4-hardening`
-**Goal:** Ensure the prototype doesn't crash during the judge's demo.
+## Phase 4: Hardening, UX Polish & BYOD ✅
+**Branch:** `git checkout -b phase-4-hardening-and-polishing`
+**Goal:** Enterprise-grade reliability, mobile optimization, and custom data ingestion.
 
-- [ ] **4.1 Timeout Mitigation**
-  - [ ] Implement Upstash QStash (or background API route pattern) to handle long-running LangGraph executions without hitting Vercel's 10-second serverless timeout.
-  - [ ] Update frontend to poll Supabase `evaluations` table for final results.
-- [ ] **4.2 Edge-Case Handling**
-  - [ ] Add `try/catch` fallbacks to JSON parsing in all agent nodes.
-  - [ ] Add gracefully handled loading states (skeletons) in the UI.
-- [ ] **Phase 4 Git Checkpoint**
-  - [ ] Ensure all code is micro-committed.
-  - [ ] Push to origin, open PR, instruct user to merge to `main`.
+- [x] **4.1 Enterprise Hardening & Security**
+  - [x] Resolve all security vulnerabilities (protobufjs, uuid, postcss) via pnpm overrides.
+  - [x] Refactor Zustand store to `sessionStorage` for tab-scoped persistence.
+  - [x] Clear entire session (including JD) on "Reset Session".
+- [x] **4.2 Responsive UX & Mobile View**
+  - [x] Implement dedicated `MobileView` accordion-style layout to eliminate overlaps.
+  - [x] Add auto-expanding log/candidate tabs based on agent activity.
+  - [x] Add "Home" navigation to dashboard for landing page access.
+- [x] **4.3 LLM Robustness & BYOD**
+  - [x] Implement 30s hard timeouts per horizontal tier to prevent hangs.
+  - [x] Add Gemini vertical fallback cascade (Pro → Flash).
+  - [x] Implement BYOD (Bring Your Own Data) CSV/JSON ingestion and ranking.
+  - [x] Fix session export to include full AI Reasoning transcripts.
+- [x] **Phase 4 Git Checkpoint**
+  - [x] Ensure all code is micro-committed (`tsc` and `lint` pass).
+  - [x] Push to origin, open PR #4 to `main`.
 
 ---
 

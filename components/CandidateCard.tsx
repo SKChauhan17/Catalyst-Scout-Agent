@@ -170,8 +170,8 @@ export default function CandidateCard({ candidate, rank }: CandidateCardProps) {
         }}
       >
         {/* Rank badge */}
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2.5">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-2.5">
             <span
               className="text-[11px] font-[500] w-6 h-6 rounded-full flex items-center justify-center shrink-0"
               style={{
@@ -182,14 +182,14 @@ export default function CandidateCard({ candidate, rank }: CandidateCardProps) {
             >
               {rank}
             </span>
-            <div>
+            <div className="min-w-0 flex-1">
               <h3 className="text-[15px] font-[600] text-[#f7f8f8]">{candidate.name}</h3>
-              <div className="flex items-center gap-3 mt-0.5">
-                <span className="flex items-center gap-1 text-[12px] text-[#8b949e]">
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="flex min-w-0 items-center gap-1 text-[12px] text-[#8b949e]">
                   <MapPin className="w-3 h-3" />
                   {candidate.location}
                 </span>
-                <span className="flex items-center gap-1 text-[12px] text-[#8b949e]">
+                <span className="flex min-w-0 items-center gap-1 text-[12px] text-[#8b949e]">
                   <DollarSign className="w-3 h-3" />
                   {candidate.salary_expectation}
                 </span>
@@ -198,7 +198,7 @@ export default function CandidateCard({ candidate, rank }: CandidateCardProps) {
           </div>
 
           {/* Scores — DESIGN.md: Geist Mono data pills */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center justify-between gap-3 self-stretch sm:w-auto sm:justify-start sm:self-auto sm:shrink-0">
             <ScorePill label="Match" value={candidate.match_score} max={1} />
             <div className="w-px h-7" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }} />
             <ScorePill label="Interest" value={candidate.interest_score} />

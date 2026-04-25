@@ -1,9 +1,5 @@
-import Groq from 'groq-sdk';
+import { invokeLLM } from '@/lib/llm/router';
 import type { AgentState, ParsedJD } from '../state';
-
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
 
 const SYSTEM_PROMPT = `You are an expert technical recruiter assistant. Your job is to parse a raw job description and extract a strict JSON object.
 
@@ -26,43 +22,25 @@ Rules:
 - "role_summary": A single concise sentence describing the role.`;
 
 export async function parseJDNode(state: AgentState): Promise<Partial<AgentState>> {
-  console.log('[Node: parseJD] Parsing raw job description via Groq...');
+  console.log('[Node: parseJD] Parsing raw job description via LLM Router...');
 
-  if (!state.rawJD || state.rawJD.trim() === '') {
+  if (!state.rawJD?.trim()) {
     throw new Error('[parseJD] rawJD is empty. Cannot parse.');
   }
 
-  let parsedJD: ParsedJD | null = null;
-  let lastError: Error | null = null;
+  try {
+    const rawJson = await invokeLLM({
+      systemPrompt: SYSTEM_PROMPT,
+      userPrompt: `Parse this job description:\n\n${state.rawJD}`,
+      temperature: 0.1,
+    });
 
-  // Retry loop with exponential backoff (max 3 attempts)
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const completion = await groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: `Parse this job description:\n\n${state.rawJD}` },
-        ],
-        temperature: 0.1, // Low temperature for deterministic JSON output
-      });
-
-      const rawJson = completion.choices[0].message.content || '{}';
-      const cleanJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
-      parsedJD = JSON.parse(cleanJson) as ParsedJD;
-      console.log('[Node: parseJD] ✓ JD parsed successfully.');
-      break;
-    } catch (err: any) {
-      lastError = err;
-      const waitMs = Math.pow(2, attempt) * 1000;
-      console.warn(`[Node: parseJD] Attempt ${attempt + 1} failed. Retrying in ${waitMs}ms...`);
-      await new Promise(res => setTimeout(res, waitMs));
-    }
+    const cleanJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsedJD = JSON.parse(cleanJson) as ParsedJD;
+    console.log('[Node: parseJD] ✓ JD parsed successfully.');
+    return { parsedJD };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`[parseJD] Failed: ${msg}`);
   }
-
-  if (!parsedJD) {
-    throw new Error(`[parseJD] All retries exhausted. Last error: ${lastError?.message}`);
-  }
-
-  return { parsedJD };
 }

@@ -5,9 +5,6 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-// 3-turn simulation: Recruiter opens, Candidate responds x2, Recruiter closes
-const TURN_COUNT = 3;
-
 export async function simulateChatNode(state: AgentState): Promise<Partial<AgentState>> {
   const { retrievedCandidates, parsedJD, currentCandidateIndex } = state;
   const candidate = retrievedCandidates[currentCandidateIndex];
