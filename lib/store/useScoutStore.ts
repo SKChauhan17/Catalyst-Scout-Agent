@@ -86,12 +86,11 @@ export const useScoutStore = create<ScoutStore>()(
     {
       name: 'catalyst-scout-session',
       storage: createJSONStorage(() => localStorage),
-      // Don't persist AbortController or isScouting — re-hydrated as false
+      // isTerminalExpanded intentionally excluded — always resets to false on refresh
       partialize: (state) => ({
         rawJD: state.rawJD,
         logs: state.logs,
         results: state.results,
-        isTerminalExpanded: state.isTerminalExpanded,
       }),
     }
   )
