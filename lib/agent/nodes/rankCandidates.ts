@@ -1,12 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import { broadcastAgentLog, broadcastAgentResult } from '@/lib/agent/realtime';
 import { invokeLLM } from '@/lib/llm/router';
-import type { AgentState, CandidateEvaluation } from '../state';
-
-// SECURITY: Anon key only — evaluations persisted via non-fatal insert
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-);
+import { getAdminSupabaseClient } from '@/lib/supabase/admin';
+import type { AgentState, CandidateEvaluation, EvaluatedCandidate } from '../state';
 
 const SCORING_SYSTEM_PROMPT = `You are an expert talent evaluation AI. You will be given a chat transcript from a simulated recruiter/candidate interview.
 
@@ -22,7 +17,7 @@ Respond with ONLY a valid JSON object. No markdown, no explanation:
 {"interest_score": <integer 0-100>, "reasoning": "<one sentence>"}`;
 
 export async function rankCandidatesNode(state: AgentState): Promise<Partial<AgentState>> {
-  const { evaluations, currentCandidateIndex } = state;
+  const { evaluations, currentCandidateIndex, retrievedCandidates } = state;
   const latestEval = evaluations[evaluations.length - 1];
 
   if (!latestEval) {
@@ -60,18 +55,64 @@ export async function rankCandidatesNode(state: AgentState): Promise<Partial<Age
     final_score: parseFloat(final_score.toFixed(2)),
   };
 
+  const candidate = retrievedCandidates[currentCandidateIndex];
+  const evaluatedCandidate: EvaluatedCandidate | null = candidate
+    ? {
+        id: candidate.id,
+        name: candidate.name,
+        skills: candidate.skills,
+        location: candidate.location,
+        salary_expectation: candidate.salary_expectation,
+        match_score: completedEval.match_score,
+        interest_score: completedEval.interest_score,
+        final_score: completedEval.final_score,
+        chat_transcript: completedEval.chat_transcript,
+      }
+    : null;
+
   console.log(
     `[Node: rankCandidates] ✓ ${latestEval.candidate_id} | match: ${normalizedMatchScore.toFixed(1)} | interest: ${interest_score} | final: ${completedEval.final_score} | ${reasoning}`
   );
 
-  // Non-fatal Supabase persist
-  const { error } = await supabase.from('evaluations').insert({
-    candidate_id: completedEval.candidate_id,
-    match_score: completedEval.match_score,
-    interest_score: completedEval.interest_score,
-    chat_transcript: completedEval.chat_transcript,
-  });
-  if (error) console.error(`[rankCandidates] Supabase insert error: ${error.message}`);
+  if (evaluatedCandidate && state.jobId) {
+    const supabase = getAdminSupabaseClient();
+    const isCustomCandidate = state.customCandidates.some(
+      (customCandidate) => customCandidate.id === evaluatedCandidate.id
+    );
+    const candidateId =
+      !isCustomCandidate
+      && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        evaluatedCandidate.id
+      )
+        ? evaluatedCandidate.id
+        : null;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from('evaluations') as any).insert({
+      candidate_id: candidateId,
+      job_id: state.jobId,
+      match_score: completedEval.match_score,
+      interest_score: completedEval.interest_score,
+      final_score: completedEval.final_score,
+      chat_transcript: completedEval.chat_transcript,
+      candidate_snapshot: evaluatedCandidate,
+    });
+
+    if (error) {
+      console.error(`[rankCandidates] Supabase insert error: ${error.message}`);
+      await broadcastAgentLog(
+        state.jobId,
+        `⚠️ [rankCandidates] ${evaluatedCandidate.name} evaluated, but persistence failed. Continuing with live result delivery.`
+      );
+    } else {
+      await broadcastAgentLog(
+        state.jobId,
+        `⚡ [rankCandidates] ${evaluatedCandidate.name} — final score: ${completedEval.final_score}`
+      );
+    }
+
+    await broadcastAgentResult(state.jobId, evaluatedCandidate);
+  }
 
   const updatedEvaluations = [...evaluations.slice(0, -1), completedEval];
   return { evaluations: updatedEvaluations, currentCandidateIndex: currentCandidateIndex + 1 };

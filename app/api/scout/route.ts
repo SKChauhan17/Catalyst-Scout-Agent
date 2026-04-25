@@ -1,25 +1,28 @@
-import { catalystScoutGraph } from '@/lib/agent/graph';
-import type {
-  AgentState,
-  Candidate,
-  CandidateEvaluation,
-  CustomCandidate,
-} from '@/lib/agent/state';
+import { Client } from '@upstash/qstash';
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
+import type { CustomCandidate } from '@/lib/agent/state';
 
 export const runtime = 'nodejs';
-// Allow up to 5 minutes for the full LangGraph pipeline
-export const maxDuration = 300;
 
-interface EvaluatedCandidate {
-  id: string;
-  name: string;
-  skills: string[];
-  location: string;
-  salary_expectation: string;
-  match_score: number;
-  interest_score: number;
-  final_score: number;
-  chat_transcript: Array<{ role: 'recruiter' | 'candidate'; content: string }>;
+const redis = Redis.fromEnv();
+const ratelimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '1 m'),
+  analytics: true,
+  prefix: 'catalyst-scout:scout',
+});
+const qstash = new Client({
+  token: process.env.QSTASH_TOKEN ?? '',
+});
+
+function getClientIp(request: Request) {
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0]?.trim() ?? 'unknown';
+  }
+
+  return request.headers.get('x-real-ip') ?? 'unknown';
 }
 
 function sanitizeCustomCandidates(input: unknown): CustomCandidate[] {
@@ -46,7 +49,7 @@ function sanitizeCustomCandidates(input: unknown): CustomCandidate[] {
       id:
         typeof record.id === 'string' && record.id.trim().length > 0
           ? record.id.trim()
-          : `custom-${crypto.randomUUID()}`,
+          : crypto.randomUUID(),
       name,
       skills: rawSkills,
       experience:
@@ -66,6 +69,24 @@ function sanitizeCustomCandidates(input: unknown): CustomCandidate[] {
 }
 
 export async function POST(req: Request): Promise<Response> {
+  const ip = getClientIp(req);
+  const { success, limit, remaining, reset } = await ratelimit.limit(`scout:${ip}`);
+
+  if (!success) {
+    return Response.json(
+      { error: 'Rate limit exceeded. Please try again in a moment.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': Math.max(1, Math.ceil((reset - Date.now()) / 1000)).toString(),
+          'X-RateLimit-Limit': limit.toString(),
+          'X-RateLimit-Remaining': remaining.toString(),
+          'X-RateLimit-Reset': reset.toString(),
+        },
+      }
+    );
+  }
+
   const body = await req.json();
   const rawJD: string = body?.rawJD?.trim();
   const customCandidates = sanitizeCustomCandidates(body?.customCandidates);
@@ -74,115 +95,37 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: 'rawJD is required' }, { status: 400 });
   }
 
-  const encoder = new TextEncoder();
+  if (!process.env.QSTASH_TOKEN) {
+    return Response.json({ error: 'QSTASH_TOKEN is not configured' }, { status: 500 });
+  }
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      const emit = (event: string, data: unknown) => {
-        const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-        controller.enqueue(encoder.encode(payload));
-      };
+  const jobId = crypto.randomUUID();
+  const workerUrl =
+    process.env.QSTASH_WORKER_URL ?? new URL('/api/worker', req.url).toString();
 
-      try {
-        emit('log', { message: '🚀 Initializing Catalyst Scout Agent...' });
-        if (customCandidates.length > 0) {
-          emit('log', {
-            message: `📦 BYOD mode active — ${customCandidates.length} custom candidates loaded into memory.`,
-          });
-        }
-
-        const initialState: Partial<AgentState> = {
-          rawJD,
-          parsedJD: null,
-          customCandidates,
-          retrievedCandidates: [],
-          evaluations: [],
-          currentCandidateIndex: 0,
-        };
-
-        // Collect retrieved candidates for merging with evaluations
-        let retrievedCandidates: Candidate[] = [];
-        const emittedIds = new Set<string>();
-
-        const graphStream = await catalystScoutGraph.stream(initialState);
-
-        for await (const chunk of graphStream) {
-          const [nodeName, nodeOutput] = Object.entries(chunk)[0] as [
-            string,
-            Partial<AgentState>
-          ];
-
-          // Generate a human-readable log per node completion
-          if (nodeName === 'parseJD' && nodeOutput.parsedJD) {
-            const skills = nodeOutput.parsedJD.mandatory_skills?.join(', ') ?? '';
-            emit('log', {
-              message: `✓ [parseJD] JD parsed — Required skills: ${skills}`,
-            });
-          } else if (nodeName === 'retrieveMatch') {
-            retrievedCandidates = nodeOutput.retrievedCandidates ?? [];
-            emit('log', {
-              message:
-                customCandidates.length > 0
-                  ? `✓ [retrieveMatch] ${retrievedCandidates.length} candidates selected from the BYOD dataset`
-                  : `✓ [retrieveMatch] ${retrievedCandidates.length} candidates retrieved via hybrid search`,
-            });
-          } else if (nodeName === 'simulateChat') {
-            const evalCount = (nodeOutput.evaluations ?? []).length;
-            emit('log', {
-              message: `💬 [simulateChat] Interview simulation ${evalCount} complete`,
-            });
-          } else if (nodeName === 'rankCandidates') {
-            // Find and emit newly completed evaluations
-            const evaluations: CandidateEvaluation[] = nodeOutput.evaluations ?? [];
-            for (const ev of evaluations) {
-              if (!emittedIds.has(ev.candidate_id) && ev.interest_score > 0) {
-                emittedIds.add(ev.candidate_id);
-
-                const matchingCandidate = retrievedCandidates.find(
-                  (c) => c.id === ev.candidate_id
-                );
-
-                emit('log', {
-                  message: `⚡ [rankCandidates] ${matchingCandidate?.name ?? ev.candidate_id} — final score: ${ev.final_score}`,
-                });
-
-                if (matchingCandidate) {
-                  const evaluated: EvaluatedCandidate = {
-                    id: matchingCandidate.id,
-                    name: matchingCandidate.name,
-                    skills: matchingCandidate.skills as string[],
-                    location: matchingCandidate.location,
-                    salary_expectation: matchingCandidate.salary_expectation,
-                    match_score: ev.match_score,
-                    interest_score: ev.interest_score,
-                    final_score: ev.final_score,
-                    chat_transcript: ev.chat_transcript,
-                  };
-                  emit('candidate', evaluated);
-                }
-              }
-            }
-          }
-        }
-
-        emit('log', { message: '✅ Scout mission complete.' });
-        emit('done', { message: 'Pipeline finished' });
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        emit('log', { message: `❌ Agent error: ${message}` });
-        emit('error', { message });
-      } finally {
-        controller.close();
-      }
+  await qstash.publishJSON({
+    url: workerUrl,
+    delay: 2,
+    body: {
+      jobId,
+      rawJD,
+      customCandidates,
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
-      'X-Accel-Buffering': 'no', // Disable Nginx buffering for SSE
+  return Response.json(
+    {
+      ok: true,
+      jobId,
+      queued: true,
     },
-  });
+    {
+      status: 200,
+      headers: {
+        'X-RateLimit-Limit': limit.toString(),
+        'X-RateLimit-Remaining': remaining.toString(),
+        'X-RateLimit-Reset': reset.toString(),
+      },
+    }
+  );
 }

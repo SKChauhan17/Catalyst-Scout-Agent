@@ -1,4 +1,6 @@
 import { invokeLLM } from '@/lib/llm/router';
+import { broadcastAgentLog } from '@/lib/agent/realtime';
+import { getAdminSupabaseClient } from '@/lib/supabase/admin';
 import type { AgentState, ParsedJD } from '../state';
 
 const SYSTEM_PROMPT = `You are an expert technical recruiter assistant. Your job is to parse a raw job description and extract a strict JSON object.
@@ -37,10 +39,31 @@ export async function parseJDNode(state: AgentState): Promise<Partial<AgentState
 
     const cleanJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsedJD = JSON.parse(cleanJson) as ParsedJD;
+    const skills = parsedJD.mandatory_skills?.join(', ') ?? 'None detected';
+
+    if (state.jobId) {
+      const supabase = getAdminSupabaseClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('jobs') as any)
+        .update({ parsed_requirements: parsedJD })
+        .eq('id', state.jobId);
+
+      if (error) {
+        console.error(`[parseJD] Failed to persist parsed JD for job ${state.jobId}: ${error.message}`);
+      }
+
+      await broadcastAgentLog(
+        state.jobId,
+        `✓ [parseJD] JD parsed — Required skills: ${skills}`
+      );
+    }
+
     console.log('[Node: parseJD] ✓ JD parsed successfully.');
     return { parsedJD };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`[parseJD] Failed: ${msg}`);
+    throw new Error(`[parseJD] Failed: ${msg}`, {
+      cause: err instanceof Error ? err : undefined,
+    });
   }
 }

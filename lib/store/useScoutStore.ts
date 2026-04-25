@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { EvaluatedCandidate } from '@/components/CandidateCard';
-import type { CustomCandidate } from '@/lib/agent/state';
+import type { CustomCandidate, EvaluatedCandidate } from '@/lib/agent/state';
 
 // ============================================================
 // Types
@@ -19,8 +18,9 @@ interface ScoutStore {
   results: EvaluatedCandidate[];
   customCandidates: CustomCandidate[];
   isScouting: boolean;
+  isScoutLaunchLocked: boolean;
   isTerminalExpanded: boolean;
-  abortController: AbortController | null;
+  currentJobId: string | null;
 
   // ── Actions ────────────────────────────────────────────────
   setJD: (jd: string) => void;
@@ -29,23 +29,28 @@ interface ScoutStore {
   addCustomCandidate: (candidate: CustomCandidate) => void;
   addCustomCandidates: (candidates: CustomCandidate[]) => void;
   clearSession: () => void;
-  startScout: () => AbortController;
+  tryLockScoutLaunch: () => boolean;
+  releaseScoutLaunchLock: () => void;
+  startScout: () => void;
+  attachScoutJob: (jobId: string) => void;
+  resolveScoutLaunchFailure: (message: string, status?: number) => void;
   abortScout: () => void;
-  finishScout: () => void;
+  finishScout: (jobId?: string) => void;
   toggleTerminalSize: () => void;
 }
 
 export const useScoutStore = create<ScoutStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       // ── Initial State ────────────────────────────────────────
       rawJD: '',
       logs: [],
       results: [],
       customCandidates: [],
       isScouting: false,
+      isScoutLaunchLocked: false,
       isTerminalExpanded: false,
-      abortController: null,
+      currentJobId: null,
 
       // ── Action Implementations ───────────────────────────────
       setJD: (jd) => set({ rawJD: jd }),
@@ -60,7 +65,10 @@ export const useScoutStore = create<ScoutStore>()(
 
       addResult: (candidate) =>
         set((state) => ({
-          results: [...state.results, candidate].sort(
+          results: [
+            ...state.results.filter((existing) => existing.id !== candidate.id),
+            candidate,
+          ].sort(
             (a, b) => b.final_score - a.final_score
           ),
         })),
@@ -83,24 +91,108 @@ export const useScoutStore = create<ScoutStore>()(
           results: [],
           customCandidates: [],
           isScouting: false,
-          abortController: null,
+          currentJobId: null,
         }),
 
-      // Creates and stores an AbortController for the active SSE stream
+      tryLockScoutLaunch: () => {
+        let didLock = false;
+
+        set((state) => {
+          if (state.isScoutLaunchLocked) {
+            return state;
+          }
+
+          didLock = true;
+          return { isScoutLaunchLocked: true };
+        });
+
+        return didLock;
+      },
+
+      releaseScoutLaunchLock: () => set({ isScoutLaunchLocked: false }),
+
       startScout: () => {
-        const controller = new AbortController();
-        set({ isScouting: true, logs: [], results: [], abortController: controller });
-        return controller;
+        set({
+          isScouting: true,
+          logs: [],
+          results: [],
+          currentJobId: null,
+        });
       },
 
-      // Fires abort on the active stream and resets isScouting
+      attachScoutJob: (jobId) =>
+        set((state) => ({
+          currentJobId: jobId,
+          logs: [
+            ...state.logs,
+            {
+              id: `${Date.now()}-${Math.random()}`,
+              message: `📨 Worker job queued (${jobId.slice(0, 8)}...). Waiting for realtime updates...`,
+              timestamp: Date.now(),
+            },
+          ],
+        })),
+
+      resolveScoutLaunchFailure: (message, status) =>
+        set((state) => {
+          const nextLogs: LogEntry[] = [
+            ...state.logs,
+            {
+              id: `${Date.now()}-${Math.random()}`,
+              message,
+              timestamp: Date.now(),
+            },
+          ];
+
+          if (status === 429 && state.currentJobId) {
+            return {
+              isScouting: true,
+              logs: [
+                ...nextLogs,
+                {
+                  id: `${Date.now()}-${Math.random()}`,
+                  message: 'ℹ️ Rate limit hit on a duplicate launch request. Continuing live updates for the active scout job.',
+                  timestamp: Date.now(),
+                },
+              ],
+            };
+          }
+
+          return {
+            isScouting: false,
+            currentJobId: null,
+            logs: nextLogs,
+          };
+        }),
+
       abortScout: () => {
-        const { abortController } = get();
-        abortController?.abort();
-        set({ isScouting: false, abortController: null });
+        set((state) => ({
+          isScouting: false,
+          isScoutLaunchLocked: false,
+          currentJobId: null,
+          logs: [
+            ...state.logs,
+            {
+              id: `${Date.now()}-${Math.random()}`,
+              message: '⏹ Live updates disconnected. The background worker may still be processing this scout job.',
+              timestamp: Date.now(),
+            },
+          ],
+        }));
       },
 
-      finishScout: () => set({ isScouting: false, abortController: null }),
+      finishScout: (jobId) =>
+        set((state) => {
+          if (jobId && state.currentJobId && state.currentJobId !== jobId) {
+            return state;
+          }
+
+          return {
+            isScouting: false,
+            isScoutLaunchLocked: false,
+            currentJobId: null,
+          };
+        }),
 
       toggleTerminalSize: () =>
         set((state) => ({ isTerminalExpanded: !state.isTerminalExpanded })),
