@@ -1,7 +1,7 @@
 # Agent Logic Subsystem
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Orchestration-LangGraph.js-141413?style=for-the-badge&labelColor=141413&color=e8e6dc" alt="LangGraph">
+  <img src="../../.github/assets/agent-hero.svg" alt="Agent Hero" width="800">
 </p>
 
 ## Overview

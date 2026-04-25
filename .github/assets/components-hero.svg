@@ -1,0 +1,10 @@
+<svg width="800" height="240" viewBox="0 0 800 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="240" fill="#050507"/>
+  <rect x="40" y="40" width="720" height="160" rx="12" stroke="white" stroke-opacity="0.08" stroke-width="1"/>
+  <text x="80" y="110" fill="#F7F8F8" font-family="Geist Sans, sans-serif" font-size="44" font-weight="700" letter-spacing="-0.06em">UI System</text>
+  <text x="80" y="145" fill="#00D992" font-family="Geist Mono, monospace" font-size="12" font-weight="500" letter-spacing="0.15em">HIGH-DENSITY MISSION CONTROL</text>
+  
+  <rect x="600" y="80" width="40" height="40" rx="4" stroke="white" stroke-opacity="0.2"/>
+  <rect x="650" y="80" width="40" height="40" rx="4" stroke="#00D992"/>
+  <rect x="600" y="130" width="90" height="30" rx="15" stroke="white" stroke-opacity="0.2"/>
+</svg>

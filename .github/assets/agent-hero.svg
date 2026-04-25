@@ -1,0 +1,16 @@
+<svg width="800" height="240" viewBox="0 0 800 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="240" fill="#050507"/>
+  <defs>
+    <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="white" fill-opacity="0.05"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="240" fill="url(#dots)"/>
+  
+  <rect x="40" y="40" width="720" height="160" rx="12" stroke="white" stroke-opacity="0.08" stroke-width="1"/>
+  <text x="80" y="110" fill="#F7F8F8" font-family="Geist Sans, sans-serif" font-size="44" font-weight="700" letter-spacing="-0.06em">Agentic Brain</text>
+  <text x="80" y="145" fill="#00D992" font-family="Geist Mono, monospace" font-size="12" font-weight="500" letter-spacing="0.15em">LANGGRAPH STATE ORCHESTRATION</text>
+  
+  <path d="M550 80L650 120L550 160" stroke="#00D992" stroke-opacity="0.5" stroke-width="2"/>
+  <rect x="530" y="100" width="40" height="40" rx="4" fill="#050507" stroke="#00D992"/>
+</svg>

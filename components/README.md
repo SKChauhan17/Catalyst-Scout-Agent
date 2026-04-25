@@ -1,7 +1,7 @@
 # UI Components & Design System
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Styling-Tailwind_CSS-141413?style=for-the-badge&labelColor=141413&color=e8e6dc" alt="Tailwind">
+  <img src="../.github/assets/components-hero.svg" alt="Components Hero" width="800">
 </p>
 
 ## Overview
