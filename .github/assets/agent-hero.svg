@@ -1,16 +1,32 @@
 <svg width="800" height="240" viewBox="0 0 800 240" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="800" height="240" fill="#050507"/>
-  <defs>
-    <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse">
-      <circle cx="2" cy="2" r="1" fill="white" fill-opacity="0.05"/>
-    </pattern>
-  </defs>
-  <rect width="800" height="240" fill="url(#dots)"/>
+  <rect width="800" height="240" fill="#141413"/>
+  <rect x="20" y="20" width="760" height="200" rx="20" fill="#E8E6DC"/>
   
-  <rect x="40" y="40" width="720" height="160" rx="12" stroke="white" stroke-opacity="0.08" stroke-width="1"/>
-  <text x="80" y="110" fill="#F7F8F8" font-family="Geist Sans, sans-serif" font-size="44" font-weight="700" letter-spacing="-0.06em">Agentic Brain</text>
-  <text x="80" y="145" fill="#00D992" font-family="Geist Mono, monospace" font-size="12" font-weight="500" letter-spacing="0.15em">LANGGRAPH STATE ORCHESTRATION</text>
+  <!-- Header -->
+  <text x="50" y="60" fill="#141413" font-family="Inter, sans-serif" font-size="20" font-weight="800" letter-spacing="-0.04em">CATALYST SCOUT</text>
+  <rect x="50" y="70" width="160" height="24" rx="12" fill="#D27D5F"/>
+  <text x="130" y="86" fill="white" font-family="Geist Mono, monospace" font-size="10" font-weight="600" letter-spacing="0.1em" text-anchor="middle">AGENT STATE MACHINE</text>
   
-  <path d="M550 80L650 120L550 160" stroke="#00D992" stroke-opacity="0.5" stroke-width="2"/>
-  <rect x="530" y="100" width="40" height="40" rx="4" fill="#050507" stroke="#00D992"/>
+  <!-- Geometric Visualization -->
+  <!-- Nodes -->
+  <circle cx="350" cy="130" r="18" fill="#141413" stroke="#525252" stroke-width="1.5"/>
+  <circle cx="450" cy="100" r="18" fill="#141413" stroke="#525252" stroke-width="1.5"/>
+  <circle cx="450" cy="160" r="18" fill="#141413" stroke="#525252" stroke-width="1.5"/>
+  <circle cx="580" cy="130" r="22" fill="#00D992" stroke="#141413" stroke-width="2"/>
+  
+  <!-- Edges -->
+  <path d="M368 125L432 105" stroke="#141413" stroke-width="1" stroke-dasharray="4 4"/>
+  <path d="M368 135L432 155" stroke="#141413" stroke-width="1" stroke-dasharray="4 4"/>
+  <path d="M468 105L558 125" stroke="#141413" stroke-width="2"/>
+  <path d="M468 155L558 135" stroke="#141413" stroke-width="2"/>
+  
+  <!-- Pulsing Accents -->
+  <circle cx="580" cy="130" r="28" stroke="#00D992" stroke-opacity="0.3">
+    <animate attributeName="r" values="24;32;24" dur="3s" repeatCount="indefinite" />
+  </circle>
+
+  <!-- Labels -->
+  <text x="350" y="165" fill="#141413" font-family="Geist Mono, monospace" font-size="8" font-weight="600" text-anchor="middle">parseJD</text>
+  <text x="450" y="80" fill="#141413" font-family="Geist Mono, monospace" font-size="8" font-weight="600" text-anchor="middle">retrieveMatch</text>
+  <text x="580" y="165" fill="#141413" font-family="Geist Mono, monospace" font-size="9" font-weight="700" text-anchor="middle">RANK_CANDIDATES</text>
 </svg>

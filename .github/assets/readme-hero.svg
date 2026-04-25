@@ -1,42 +1,14 @@
 <svg width="800" height="240" viewBox="0 0 800 240" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Abyss Black Background -->
-  <rect width="800" height="240" fill="#050507"/>
+  <rect width="800" height="240" fill="#141413"/>
+  <rect x="20" y="20" width="760" height="200" rx="20" fill="#E8E6DC"/>
   
-  <!-- Subtle Grid Pattern (Linear/Vercel style) -->
-  <defs>
-    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" stroke-opacity="0.03" stroke-width="0.5"/>
-    </pattern>
-  </defs>
-  <rect width="800" height="240" fill="url(#grid)"/>
+  <text x="400" y="100" fill="#141413" font-family="Inter, sans-serif" font-size="48" font-weight="900" letter-spacing="-0.06em" text-anchor="middle">CATALYST SCOUT</text>
+  <text x="400" y="140" fill="#141413" font-family="Geist Mono, monospace" font-size="14" font-weight="600" letter-spacing="0.2em" text-anchor="middle">AI-POWERED TALENT SCOUTING AGENT</text>
   
-  <!-- Content Container with Border -->
-  <rect x="40" y="40" width="720" height="160" rx="12" stroke="white" stroke-opacity="0.08" stroke-width="1"/>
+  <!-- Subtle UI Elements -->
+  <rect x="340" y="160" width="120" height="30" rx="15" fill="#141413"/>
+  <text x="400" y="180" fill="#00D992" font-family="Geist Mono, monospace" font-size="10" font-weight="700" text-anchor="middle">MISSION: ACTIVE</text>
   
-  <!-- Glow Effect (VoltAgent style) -->
-  <circle cx="700" cy="120" r="80" fill="#00D992" fill-opacity="0.05"/>
-  
-  <!-- Main Title (Geist Sans style) -->
-  <text x="80" y="110" fill="#F7F8F8" font-family="Geist Sans, sans-serif" font-size="44" font-weight="700" letter-spacing="-0.06em">Catalyst Scout</text>
-  
-  <!-- Subtitle (Geist Mono style) -->
-  <text x="80" y="145" fill="#00D992" font-family="Geist Mono, monospace" font-size="12" font-weight="500" letter-spacing="0.15em">AI-POWERED RECRUITING INTELLIGENCE</text>
-  
-  <!-- Feature Pills -->
-  <rect x="80" y="170" width="90" height="22" rx="11" stroke="white" stroke-opacity="0.1"/>
-  <text x="125" y="184" fill="#8B949E" font-family="Geist Sans, sans-serif" font-size="9" font-weight="500" text-anchor="middle">LANGGRAPH</text>
-  
-  <rect x="180" y="170" width="90" height="22" rx="11" stroke="white" stroke-opacity="0.1"/>
-  <text x="225" y="184" fill="#8B949E" font-family="Geist Sans, sans-serif" font-size="9" font-weight="500" text-anchor="middle">SUPABASE</text>
-  
-  <rect x="280" y="170" width="90" height="22" rx="11" stroke="white" stroke-opacity="0.1"/>
-  <text x="325" y="184" fill="#8B949E" font-family="Geist Sans, sans-serif" font-size="9" font-weight="500" text-anchor="middle">QSTASH</text>
-
-  <!-- Interactive Signal (Blinking) -->
-  <circle cx="700" cy="120" r="4" fill="#00D992">
-    <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite" />
-  </circle>
-  <circle cx="700" cy="120" r="12" stroke="#00D992" stroke-opacity="0.3">
-    <animate attributeName="r" values="8;16;8" dur="2s" repeatCount="indefinite" />
-  </circle>
+  <circle cx="100" cy="120" r="40" stroke="#141413" stroke-opacity="0.05" stroke-width="2"/>
+  <circle cx="700" cy="120" r="40" stroke="#141413" stroke-opacity="0.05" stroke-width="2"/>
 </svg>
