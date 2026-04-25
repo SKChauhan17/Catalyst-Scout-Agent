@@ -30,7 +30,13 @@ function getNodePill(log: string): string | null {
 function exportSession(
   rawJD: string,
   logs: { message: string; timestamp: number }[],
-  results: { name: string; final_score: number; match_score: number; interest_score: number }[]
+  results: {
+    name: string;
+    final_score: number;
+    match_score: number;
+    interest_score: number;
+    chat_transcript: Array<{ role: string; content: string }>;
+  }[]
 ) {
   const payload = {
     exportedAt: new Date().toISOString(),
@@ -42,6 +48,9 @@ function exportSession(
       finalScore: r.final_score,
       matchScore: Math.round(r.match_score * 100),
       interestScore: r.interest_score,
+      aiTranscript: r.chat_transcript.map(
+        (t) => `${t.role.toUpperCase()}: ${t.content}`
+      ),
     })),
   };
 
