@@ -9,7 +9,7 @@ export default function ResultsFeed() {
   const { results, isScouting } = useScoutStore();
 
   return (
-    <main id="results-feed" className="flex-1 flex flex-col overflow-hidden bg-[#050507]">
+    <main id="results-feed" className="flex-1 flex flex-col overflow-hidden bg-[#050507] min-h-0">
       {/* Header */}
       <div
         className="flex items-center justify-between px-6 py-4 border-b shrink-0"
