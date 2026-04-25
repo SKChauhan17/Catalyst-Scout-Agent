@@ -179,13 +179,11 @@ export async function invokeLLM(req: LLMRequest): Promise<string> {
     const tier = TIERS[i];
     try {
       const result = await tier.invoke(req);
-      if (result?.trim()) {
-        if (i > 0) {
-          // Only log when we've fallen back past Tier 1
-          console.log(`[LLM Router] ✓ Response served by Tier ${i + 1}: ${tier.name}`);
-        }
+      if (result && result.trim().length > 0) {
+        console.log(`[LLM Router] ✅ SUCCESS: Tier ${i + 1} (${tier.name}) fulfilled the request.`);
         return result;
       }
+      console.warn(`[LLM Router] ⚠️ Tier ${i + 1} (${tier.name}) returned an empty response. Trying next...`);
     } catch (err: unknown) {
       if (isRetryable(err)) {
         const msg = err instanceof Error ? err.message : String(err);
