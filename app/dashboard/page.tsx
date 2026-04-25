@@ -1,15 +1,17 @@
 import Link from 'next/link';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
 import ResultsFeed from '@/components/dashboard/ResultsFeed';
+import MobileView from '@/components/dashboard/MobileView';
 import ProductTour from '@/components/ProductTour';
 import { Zap, ChevronLeft } from 'lucide-react';
 
 export default function DashboardPage() {
   return (
     <div className="flex flex-col h-screen overflow-x-hidden bg-[#050507]">
-      {/* Top Navigation */}
+
+      {/* ── Top Navigation (always visible) ── */}
       <header
-        className="flex items-center justify-between px-6 py-3 shrink-0 border-b"
+        className="flex items-center justify-between px-4 sm:px-6 py-3 shrink-0 border-b"
         style={{ backgroundColor: 'rgba(255,255,255,0.01)', borderColor: 'rgba(255,255,255,0.05)' }}
       >
         <div className="flex items-center gap-2.5">
@@ -57,16 +59,21 @@ export default function DashboardPage() {
           >
             Mission Control
           </span>
-          {/* Product tour trigger (client component) */}
           <ProductTour />
         </div>
       </header>
 
-      {/* Responsive layout: stacked on mobile, two-column on desktop */}
-      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+      {/* ── Mobile layout: accordion stack (< lg) ── */}
+      <div className="flex flex-1 overflow-hidden lg:hidden">
+        <MobileView />
+      </div>
+
+      {/* ── Desktop layout: two-column (lg+) ── */}
+      <div className="hidden lg:flex flex-1 overflow-hidden">
         <DashboardSidebar />
         <ResultsFeed />
       </div>
+
     </div>
   );
 }
