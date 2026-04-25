@@ -1,9 +1,17 @@
-import Groq from 'groq-sdk';
+import { broadcastAgentLog } from '@/lib/agent/realtime';
+import { invokeLLM } from '@/lib/llm/router';
 import type { AgentState, ChatTurn } from '../state';
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+function buildConversationPrompt(transcript: ChatTurn[]): string {
+  return [
+    'Continue this recruiter and candidate interview simulation.',
+    'Conversation so far:',
+    transcript
+      .map((turn) => `${turn.role.toUpperCase()}: ${turn.content}`)
+      .join('\n\n'),
+    "Respond with ONLY the candidate's next message as plain text. Do not add labels, quotes, or markdown.",
+  ].join('\n\n');
+}
 
 export async function simulateChatNode(state: AgentState): Promise<Partial<AgentState>> {
   const { retrievedCandidates, parsedJD, currentCandidateIndex } = state;
@@ -35,35 +43,31 @@ Respond authentically as this candidate would. Be concise (2-4 sentences per tur
     { role: 'recruiter', content: recruiterOpener },
   ];
 
-  // Build the conversation history for the Groq API
-  const conversationHistory: Groq.Chat.ChatCompletionMessageParam[] = [
-    { role: 'system', content: candidateSystemPrompt },
-    { role: 'user', content: recruiterOpener },
-  ];
-
-  // Simulate TURN_COUNT / 1.5 ≈ 2 candidate responses with recruiter follow-ups
+  // Drive each turn through the shared time-aware 9-tier invokeLLM waterfall.
   for (let turn = 0; turn < 2; turn++) {
-    // Candidate responds
-    const candidateResponse = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: conversationHistory,
+    const candidateMsg = (await invokeLLM({
+      systemPrompt: candidateSystemPrompt,
+      userPrompt: buildConversationPrompt(transcript),
       temperature: 0.7,
-      max_tokens: 200,
-    });
+    })).trim();
 
-    const candidateMsg = candidateResponse.choices[0].message.content || '';
     transcript.push({ role: 'candidate', content: candidateMsg });
-    conversationHistory.push({ role: 'assistant', content: candidateMsg });
 
     // Recruiter follow-up (only before the final candidate response)
     if (turn === 0) {
       const recruiterFollowUp = `That's great to hear! Can you tell me a bit about your experience with ${parsedJD.mandatory_skills[0] ?? 'the core tech stack'} and what your ideal next step looks like?`;
       transcript.push({ role: 'recruiter', content: recruiterFollowUp });
-      conversationHistory.push({ role: 'user', content: recruiterFollowUp });
     }
   }
 
   console.log(`[Node: simulateChat] ✓ 3-turn transcript complete for ${candidate.name}.`);
+
+  if (state.jobId) {
+    await broadcastAgentLog(
+      state.jobId,
+      `💬 [simulateChat] Interview simulation ${currentCandidateIndex + 1} complete for ${candidate.name}`
+    );
+  }
 
   // Write the transcript into the evaluations array for this candidate
   // (rankCandidates will read it and compute the final scores)
