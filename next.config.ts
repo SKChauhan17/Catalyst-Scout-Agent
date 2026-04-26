@@ -1,13 +1,11 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['@xenova/transformers'],
-  
-  // Force Vercel to bundle the local WASM binaries
-  // In Next.js 16, this is a top-level property, not under 'experimental'
+  serverExternalPackages: ['@xenova/transformers', 'onnxruntime-node'],
   outputFileTracingIncludes: {
     '/api/**/*': [
-      './node_modules/onnxruntime-web/dist/*.wasm',
+      // Only grab the Linux x64 binaries that Vercel uses!
+      './node_modules/onnxruntime-node/bin/napi-v3/linux/x64/**/*',
     ],
   },
 };

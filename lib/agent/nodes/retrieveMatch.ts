@@ -1,12 +1,5 @@
-import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { pipeline, env } from '@xenova/transformers';
-
-// 1. Bypass native bindings
-env.backends.onnx.wasm.numThreads = 1;
-
-// 2. Point exactly to the bundled WASM files inside Vercel's execution directory
-env.backends.onnx.wasm.wasmPaths = path.join(process.cwd(), 'node_modules/onnxruntime-web/dist/');
 
 // 3. Route model cache to the writable /tmp directory
 env.cacheDir = '/tmp/.cache';
@@ -109,7 +102,7 @@ function scoreCandidateHeuristically(candidate: CustomCandidate, parsedJD: Parse
   const locationText = `${candidate.location} ${candidate.experience}`.toLowerCase();
   const locationScore =
     parsedJD.location.toLowerCase() === 'remote'
-    || locationText.includes(parsedJD.location.toLowerCase())
+      || locationText.includes(parsedJD.location.toLowerCase())
       ? 1
       : 0;
 
