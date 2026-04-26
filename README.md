@@ -9,6 +9,10 @@
   <img src="https://img.shields.io/badge/LangGraph_AI-141413?style=for-the-badge&logo=langchain&labelColor=141413&color=e8e6dc" alt="LangGraph">
   <img src="https://img.shields.io/badge/Supabase_Vector-141413?style=for-the-badge&logo=supabase&labelColor=141413&color=e8e6dc" alt="Supabase">
   <img src="https://img.shields.io/badge/Upstash_QStash-141413?style=for-the-badge&logo=upstash&labelColor=141413&color=e8e6dc" alt="Upstash">
+  <a href="https://catalyst-scout-agent.vercel.app/">
+    <img src="https://img.shields.io/badge/Live_App-🚀_Launch-e8e6dc?style=for-the-badge&logo=vercel&labelColor=141413" alt="Live App">
+  </a>
+
 </p>
 
 <p align="center">
@@ -141,9 +145,20 @@ pnpm dev
 
 ---
 
-## Live Deployment & Demo
-- **Live App:** [Coming Soon]
-- **Video Guide:** [Coming Soon]
+## 🚀 Live Deployment & Demo
+
+<div align="center">
+  <a href="https://catalyst-scout-agent.vercel.app/">
+    <img src="https://img.shields.io/badge/Live_App-🚀_Launch-e8e6dc?style=for-the-badge&logo=vercel&labelColor=141413" alt="Live App">
+  </a>
+  <a href="#video-guide">
+    <img src="https://img.shields.io/badge/Video_Demo-📺_Watch-e8e6dc?style=for-the-badge&logo=youtube&labelColor=141413" alt="Video Demo">
+  </a>
+</div>
+
+- **Live Application:** [catalyst-scout-agent.vercel.app](https://catalyst-scout-agent.vercel.app/)
+- **Video Demonstration:** [Coming Soon]
+
 
 ---
 
