@@ -1,8 +1,15 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // Externalize transformers to ensure it's loaded correctly in serverless
   serverExternalPackages: ['@xenova/transformers'],
+  
+  // Force Vercel to bundle the local WASM binaries
+  // In Next.js 16, this is a top-level property, not under 'experimental'
+  outputFileTracingIncludes: {
+    '/api/**/*': [
+      './node_modules/onnxruntime-web/dist/*.wasm',
+    ],
+  },
 };
 
 export default nextConfig;
