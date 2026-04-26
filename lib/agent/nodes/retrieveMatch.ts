@@ -1,13 +1,14 @@
+import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { pipeline, env } from '@xenova/transformers';
 
-// 1. Bypass native C++ bindings
+// 1. Bypass native bindings
 env.backends.onnx.wasm.numThreads = 1;
 
-// 2. Fix the missing WASM file error by fetching it dynamically from a CDN
-env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/';
+// 2. Point exactly to the bundled WASM files inside Vercel's execution directory
+env.backends.onnx.wasm.wasmPaths = path.join(process.cwd(), 'node_modules/onnxruntime-web/dist/');
 
-// 3. Fix the Vercel Read-Only Filesystem error by routing the model cache to /tmp
+// 3. Route model cache to the writable /tmp directory
 env.cacheDir = '/tmp/.cache';
 
 // 4. Disable local file system models
