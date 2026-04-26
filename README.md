@@ -157,7 +157,7 @@ pnpm dev
 </div>
 
 - **Live Application:** [catalyst-scout-agent.vercel.app](https://catalyst-scout-agent.vercel.app/)
-- **Video Demonstration:** [Coming Soon]
+- **Video Demonstration:** [Video Link](https://drive.google.com/file/d/1Af0EdAzgp_QAZJNwE2HA_I-nTKqfAvTo/view?usp=sharing)
 
 
 ---
