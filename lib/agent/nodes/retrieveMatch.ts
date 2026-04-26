@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { pipeline, env } from '@xenova/transformers';
 
-// VERCEL FIX: Force WASM backend and disable local model loading for serverless compatibility
+// 1. Disable local file system models
 env.allowLocalModels = false;
+// 2. Explicitly force WASM and limit threads for serverless stability
 env.backends.onnx.wasm.numThreads = 1;
 import { broadcastAgentLog } from '@/lib/agent/realtime';
 import { invokeLLM } from '@/lib/llm/router';
