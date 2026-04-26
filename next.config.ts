@@ -3,13 +3,13 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // 1. Externalize the packages so Turbopack doesn't try to bundle them natively
   serverExternalPackages: ['@xenova/transformers', 'onnxruntime-node'],
-  experimental: {
-    // 2. Force Vercel to copy the required C++ binaries into the Lambda container
-    outputFileTracingIncludes: {
-      '/api/**/*': [
-        './node_modules/onnxruntime-node/bin/**/*',
-      ],
-    },
+  
+  // 2. Force Vercel to copy the required C++ binaries into the Lambda container
+  // In Next.js 16, this is a top-level property, not under 'experimental'
+  outputFileTracingIncludes: {
+    '/api/**/*': [
+      './node_modules/onnxruntime-node/bin/**/*',
+    ],
   },
 };
 
