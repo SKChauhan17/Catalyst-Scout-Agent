@@ -142,7 +142,7 @@ pnpm dev
 ---
 
 ## Live Deployment & Demo
-- **Live App:** [Coming Soon]
+- **Live App:** [Deployed Site](https://catalyst-scout-agent.vercel.app/)
 - **Video Guide:** [Coming Soon]
 
 ---
