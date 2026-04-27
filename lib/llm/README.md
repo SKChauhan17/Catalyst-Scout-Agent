@@ -17,28 +17,28 @@ We utilize a time-sliced, multi-provider fallback strategy. Each tier is specifi
       ▼
 ┌─────────────┐  < 1.5s  ┌─────────────┐
 │ Tier 1:     │─────────▶│ Tier 2:     │
-│ SambaNova   │  FAIL    │ Groq        │
+│ SambaNova   │  FAIL    │ OpenRouter  │
 └─────────────┘          └─────────────┘
       │                        │
       │ 1.5s Timeout           │ 1.5s Timeout
       ▼                        ▼
 ┌─────────────┐          ┌─────────────┐
 │ Tier 3:     │          │ Tier 4:     │
-│ Groq Llama  │          │ SambaNova   │
+│ Groq        │          │ Cerebras    │
 └─────────────┘          └─────────────┘
       │                        │
       ▼────────────────────────▼
       │
       ▼  > 6.0s Powerhouse Jump
 ┌──────────────────────────────────────┐
-│ Tier 5-8: OpenRouter (Claude/GPT)    │
-│ High-reliability reasoning pool      │
+│ Tier 5-8: Gemini Powerhouse          │
+│ (3.1 Pro -> 3 Pro -> 2.5 Pro -> Flash)
 └──────────────────────────────────────┘
       │
       ▼  > 10.0s Emergency Jump
 ┌──────────────────────────────────────┐
-│ Tier 9: Deterministic Heuristic      │
-│ Zero-LLM fallback logic              │
+│ Tier 9: Gemini 2.0 Flash             │
+│ Ultra-fast, high-availability net    │
 └──────────────────────────────────────┘
 ```
 
@@ -46,11 +46,13 @@ We utilize a time-sliced, multi-provider fallback strategy. Each tier is specifi
 
 | Tier | Provider | Model | Logic |
 | :--- | :--- | :--- | :--- |
-| **1** | SambaNova | Llama 3.3 70B | Ultra-low latency primary. |
-| **2-4** | Groq | Llama 3 70B | Secondary low-latency group. |
-| **5-6** | OpenRouter | Claude 3.5 Sonnet | High-fidelity reasoning fallback. |
-| **7-8** | OpenRouter | GPT-4o / o1-mini | Tertiary reasoning pool. |
-| **9** | Local | Heuristic | Hard-coded retrieval logic for 100% survival. |
+| **1** | SambaNova | Meta-Llama-3.3-70B-Instruct | Ultra-low latency primary. |
+| **2** | OpenRouter | meta-llama/llama-3.3-70b-instruct:free | Free, low-latency secondary. |
+| **3** | Groq | llama-3.3-70b-versatile | Versatile high-speed fallback. |
+| **4** | Cerebras | llama3.1-8b | Instant inference group. |
+| **5-6** | Gemini | 3.1 Pro / 3 Pro Preview | Heavy reasoning powerhouse jump. |
+| **7-8** | Gemini | 2.5 Pro / 2.5 Flash | High-reliability reasoning pool. |
+| **9** | Gemini | 2.0 Flash | Emergency ultra-fast survival net. |
 
 ## Implementation
 The logic resides in `lib/llm/router.ts`. It utilizes a recursive retry mechanism that tracks elapsed time and jumps tiers dynamically if a provider is unresponsive, ensuring the user is never stuck on a loading spinner.

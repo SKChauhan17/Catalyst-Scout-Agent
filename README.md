@@ -64,7 +64,7 @@ The system operates as a distributed state machine, decoupling the frontend miss
 | **JD Parsing** | High-precision extraction of mandatory/optional skills and budget from raw text. |
 | **Hybrid Search** | Combined pgvector cosine similarity and semantic filtering for internal & BYOD datasets. |
 | **Simulated Interviews** | Dynamic 3-turn recruiter/candidate simulations to gauge intent and enthusiasm. |
-| **9-Tier Waterfall** | An "immortal" LLM router spanning Groq, SambaNova, and OpenRouter for 100% uptime. |
+| **9-Tier Waterfall** | An "immortal" LLM router spanning SambaNova, OpenRouter, Groq, Cerebras, and Gemini for 100% uptime. |
 | **Real-time Recovery** | WebSocket terminal state that survives refreshes via persistent Postgres log re-streaming. |
 
 ---
@@ -90,7 +90,7 @@ Detailed technical documentation for core subsystems:
 | :--- | :--- |
 | **Frontend** | Next.js 16 (App Router), Tailwind CSS, Framer Motion |
 | **Agentic** | LangGraph.js, LangChain |
-| **LLMs** | Llama 3.3 (Groq/SambaNova), Claude 3.5 Sonnet, GPT-4o |
+| **LLMs** | Llama 3.3/3.1 (SambaNova/OpenRouter/Groq/Cerebras), Gemini (3.1/3/2.5/2.0) |
 | **Database** | Supabase (PostgreSQL), pgvector |
 | **Infrastructure** | Upstash QStash (Queue), Upstash Redis (Rate Limit) |
 | **State** | Zustand, Supabase Realtime (WebSockets) |

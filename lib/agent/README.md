@@ -9,9 +9,9 @@ The "Brain" of Catalyst Scout is a stateful directed acyclic graph (DAG) built w
 
 ## The 9-Tier LLM Waterfall
 To ensure zero failures, we implement a time-sliced fallback router:
-1. **Tier 1-4 (Latency Optimized):** Groq / SambaNova (Llama 3.3 70B). If sub-second response fails or rate limits, jump to next.
-2. **Tier 5-8 (Reasoning Optimized):** OpenRouter (Claude 3.5 Sonnet / GPT-4o).
-3. **Tier 9 (Safety Net):** Deterministic heuristic fallback.
+1. **Tier 1-4 (Latency Optimized):** SambaNova / OpenRouter / Groq / Cerebras. If sub-second response fails or rate limits, jump to next.
+2. **Tier 5-8 (Reasoning Optimized):** Gemini Powerhouse (3.1 Pro / 3 Pro / 2.5 Pro / Flash).
+3. **Tier 9 (Safety Net):** Gemini 2.0 Flash fallback for 100% survival.
 
 ## Graph Nodes
 
